@@ -18,7 +18,8 @@ We are building this repo **chapter by chapter**.
 | 06 | Closure Memory Leaks | [View](./javascript/06-closure-memory-leaks.md) |
 | 07 | this + call / apply / bind | [View](./javascript/07-this-call-apply-bind.md) |
 | 08 | Polyfills + Hard Questions + Edge Cases | [View](./javascript/08-this-polyfills-hard-questions.md) |
-| 09 | **map, filter, reduce** | [View](./javascript/09-map-filter-reduce.md) |
+| 09 | map, filter, reduce | [View](./javascript/09-map-filter-reduce.md) |
+| 10 | **map, filter, reduce Polyfills** | [View](./javascript/10-map-filter-reduce-polyfills.md) |
 
 ---
 
