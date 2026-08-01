@@ -20,7 +20,8 @@ We are building this repo **chapter by chapter**.
 | 08 | Polyfills + Hard Questions + Edge Cases | [View](./javascript/08-this-polyfills-hard-questions.md) |
 | 09 | map, filter, reduce | [View](./javascript/09-map-filter-reduce.md) |
 | 10 | map, filter, reduce Polyfills | [View](./javascript/10-map-filter-reduce-polyfills.md) |
-| 11 | **Functions Deep Dive** | [View](./javascript/11-functions-deep-dive.md) |
+| 11 | Functions Deep Dive | [View](./javascript/11-functions-deep-dive.md) |
+| 12 | **Spread vs Rest Operator** | [View](./javascript/12-spread-vs-rest.md) |
 
 ---
 
