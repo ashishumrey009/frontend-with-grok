@@ -16,7 +16,8 @@ We are building this repo **chapter by chapter**.
 | 04 | Coding Challenges on TDZ + Hoisting (Q&A together) | [View](./javascript/04-coding-challenges-tdz-hoisting.md) |
 | 05 | Closures Deep Dive | [View](./javascript/05-closures-deep-dive.md) |
 | 06 | Closure Memory Leaks | [View](./javascript/06-closure-memory-leaks.md) |
-| 07 | **this + call / apply / bind** | [View](./javascript/07-this-call-apply-bind.md) |
+| 07 | this + call / apply / bind | [View](./javascript/07-this-call-apply-bind.md) |
+| 08 | **Hard Interview + Polyfills + Edge Cases** | [View](./javascript/08-this-hardcore-interview-polyfills.md) |
 
 ---
 
