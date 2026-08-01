@@ -15,7 +15,8 @@ We are building this repo **chapter by chapter**.
 | 03 | TDZ + Hoisting Interview Questions (Q&A together) | [View](./javascript/03-tdz-hoisting-interview-questions.md) |
 | 04 | Coding Challenges on TDZ + Hoisting (Q&A together) | [View](./javascript/04-coding-challenges-tdz-hoisting.md) |
 | 05 | Closures Deep Dive | [View](./javascript/05-closures-deep-dive.md) |
-| 06 | **Closure Memory Leaks** | [View](./javascript/06-closure-memory-leaks.md) |
+| 06 | Closure Memory Leaks | [View](./javascript/06-closure-memory-leaks.md) |
+| 07 | **this + call / apply / bind** | [View](./javascript/07-this-call-apply-bind.md) |
 
 ---
 
