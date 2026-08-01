@@ -1,187 +1,357 @@
-# Chapter 9: map, filter, reduce
+# Chapter 9: map, filter, reduce + Polyfills (Interview Style)
 
-Ye teen sabse important array methods hain. Interview mein bahut poochhte hain.
+Bilkul bhai. Interview ke liye map, filter, reduce + unke polyfills ko simple way mein samajh le. JavaScript interview mein explanation + code dono important hain.
 
 ---
 
 ## 1. map()
 
-**Kya karta hai?**  
-Array ke **har element** pe koi transformation apply karta hai aur **naya array** return karta hai (original change nahi hota).
+### What does map() do?
+map() array ke har element par operation karta hai aur **new array** return karta hai.
 
-### Syntax
 ```js
-const newArray = array.map((element, index, array) => {
-  return transformedValue;
+const nums = [1, 2, 3, 4];
+
+const result = nums.map(num => num * 2);
+
+console.log(result);
+// [2, 4, 6, 8]
+```
+
+### Interview explanation
+> "Map is used when I want to transform every element of an array. It returns a new array having the same length as the original array."
+
+### Polyfill of map()
+
+```js
+Array.prototype.myMap = function(callback) {
+  const result = [];
+
+  for (let i = 0; i < this.length; i++) {
+    result.push(callback(this[i], i, this));
+  }
+
+  return result;
+};
+```
+
+**Usage:**
+
+```js
+const nums = [1, 2, 3, 4];
+
+const result = nums.myMap(num => num * 2);
+
+console.log(result);
+// [2, 4, 6, 8]
+```
+
+### Important callback arguments
+
+```js
+callback(currentValue, index, array)
+```
+
+Example:
+
+```js
+nums.myMap((value, index, array) => {
+  console.log(value, index, array);
 });
 ```
-
-### Example
-```js
-const numbers = [1, 2, 3, 4, 5];
-
-const doubled = numbers.map(num => num * 2);
-console.log(doubled); // [2, 4, 6, 8, 10]
-console.log(numbers); // [1, 2, 3, 4, 5]  ← original same
-```
-
-```js
-const users = [
-  { name: "Ashish", age: 25 },
-  { name: "Grok", age: 2 }
-];
-
-const names = users.map(user => user.name);
-console.log(names); // ["Ashish", "Grok"]
-```
-
-**Important Points:**
-- Hamesha **naya array** return karta hai
-- Length original jitni hi rehti hai
-- Side-effect ke liye mat use karo (uske liye `forEach`)
 
 ---
 
 ## 2. filter()
 
-**Kya karta hai?**  
-Array se **sirf un elements** ko nikalta hai jo condition pass karte hain. Naya array return karta hai.
-
-### Syntax
-```js
-const filteredArray = array.filter((element, index, array) => {
-  return condition; // true/false
-});
-```
-
-### Example
-```js
-const numbers = [1, 2, 3, 4, 5, 6];
-
-const even = numbers.filter(num => num % 2 === 0);
-console.log(even); // [2, 4, 6]
-```
+### What does filter() do?
+filter() un elements ko select karta hai jo condition satisfy karte hain.
 
 ```js
-const users = [
-  { name: "Ashish", age: 25 },
-  { name: "Rahul", age: 17 },
-  { name: "Priya", age: 30 }
-];
+const nums = [1, 2, 3, 4, 5, 6];
 
-const adults = users.filter(user => user.age >= 18);
-console.log(adults);
-// [{ name: "Ashish", age: 25 }, { name: "Priya", age: 30 }]
+const result = nums.filter(num => num % 2 === 0);
+
+console.log(result);
+// [2, 4, 6]
 ```
 
-**Important Points:**
-- Condition `true` return karo toh element rahega
-- Length kam ho sakti hai (ya same)
-- Original array change nahi hota
+### Interview explanation
+> "Filter is used when I want to select elements based on a condition. It returns a new array and the resulting array can have fewer elements than the original."
+
+### Polyfill of filter()
+
+```js
+Array.prototype.myFilter = function(callback) {
+  const result = [];
+
+  for (let i = 0; i < this.length; i++) {
+    if (callback(this[i], i, this)) {
+      result.push(this[i]);
+    }
+  }
+
+  return result;
+};
+```
+
+**Usage:**
+
+```js
+const nums = [1, 2, 3, 4, 5, 6];
+
+const result = nums.myFilter(num => num % 2 === 0);
+
+console.log(result);
+// [2, 4, 6]
+```
 
 ---
 
 ## 3. reduce()
 
-**Kya karta hai?**  
-Array ke saare elements ko **ek single value** mein reduce kar deta hai (sum, product, object, array kuch bhi).
+Ye thoda important hai interview ke liye.
 
-### Syntax
+reduce() array ko **single value** mein reduce karta hai.
+
+### Example:
+
 ```js
-const result = array.reduce((accumulator, currentValue, index, array) => {
-  return updatedAccumulator;
-}, initialValue);
-```
+const nums = [1, 2, 3, 4];
 
-### Example 1: Sum
-```js
-const numbers = [1, 2, 3, 4, 5];
-
-const sum = numbers.reduce((acc, curr) => {
-  return acc + curr;
+const result = nums.reduce((sum, num) => {
+  return sum + num;
 }, 0);
 
-console.log(sum); // 15
+console.log(result);
+// 10
 ```
 
-### Example 2: Maximum
+### Flow samajh
+
+```text
+sum = 0
+
+0 + 1 = 1
+1 + 2 = 3
+3 + 3 = 6
+6 + 4 = 10
+```
+
+### Interview explanation
+> "Reduce executes a reducer function on each element and accumulates the result into a single value. The accumulator can be a number, string, object, array, or any other data structure."
+
+### Reduce Polyfill
+
 ```js
-const numbers = [3, 7, 2, 9, 5];
+Array.prototype.myReduce = function(callback, initialValue) {
 
-const max = numbers.reduce((acc, curr) => {
-  return curr > acc ? curr : acc;
-}, numbers[0]);
+  let accumulator;
+  let startIndex;
 
-console.log(max); // 9
+  if (arguments.length >= 2) {
+    accumulator = initialValue;
+    startIndex = 0;
+  } else {
+    accumulator = this[0];
+    startIndex = 1;
+  }
+
+  for (let i = startIndex; i < this.length; i++) {
+    accumulator = callback(
+      accumulator,
+      this[i],
+      i,
+      this
+    );
+  }
+
+  return accumulator;
+};
 ```
 
-### Example 3: Object banana (bahut important)
+**Usage:**
+
+```js
+const nums = [1, 2, 3, 4];
+
+const result = nums.myReduce((sum, num) => {
+  return sum + num;
+}, 0);
+
+console.log(result);
+// 10
+```
+
+---
+
+## Most Important Difference
+
+Interview mein ye table yaad rakh:
+
+| Method   | Purpose                  | Return       |
+|----------|--------------------------|--------------|
+| map()    | Transform every element  | New array    |
+| filter() | Select elements          | New array    |
+| reduce() | Accumulate / convert     | Single value |
+
+### Example:
+
+```js
+const nums = [1, 2, 3, 4, 5];
+```
+
+**Map**
+```js
+nums.map(x => x * 2);
+// [2, 4, 6, 8, 10]
+```
+Same number of elements.
+
+**Filter**
+```js
+nums.filter(x => x > 3);
+// [4, 5]
+```
+Can have fewer elements.
+
+**Reduce**
+```js
+nums.reduce((sum, x) => sum + x, 0);
+// 15
+```
+Usually one final value.
+
+---
+
+## One Interview Example Using All Three
+
 ```js
 const users = [
-  { id: 1, name: "Ashish" },
-  { id: 2, name: "Grok" },
-  { id: 3, name: "Rahul" }
+  { name: "A", age: 20 },
+  { name: "B", age: 17 },
+  { name: "C", age: 25 }
 ];
-
-const userMap = users.reduce((acc, user) => {
-  acc[user.id] = user.name;
-  return acc;
-}, {});
-
-console.log(userMap);
-// { 1: "Ashish", 2: "Grok", 3: "Rahul" }
 ```
 
-### Example 4: Flatten array
-```js
-const nested = [[1, 2], [3, 4], [5]];
-
-const flat = nested.reduce((acc, curr) => {
-  return acc.concat(curr);
-}, []);
-
-console.log(flat); // [1, 2, 3, 4, 5]
-```
-
-**Important Points:**
-- `initialValue` dena almost hamesha recommended hai
-- Agar `initialValue` nahi doge toh pehla element accumulator ban jata hai
-- Bahut powerful hai — map + filter dono ka kaam bhi kar sakta hai
-
----
-
-## 4. Comparison Table
-
-| Method    | Kya return karta hai      | Length change? | Use case                      |
-|-----------|---------------------------|----------------|-------------------------------|
-| **map**   | Naya array (transformed)  | Same           | Transform every element       |
-| **filter**| Naya array (filtered)     | Kam ho sakti   | Select some elements          |
-| **reduce**| Single value (anything)   | N/A            | Aggregate / combine everything|
-
----
-
-## 5. Chaining (Bahut Common)
+### Get names of adults
 
 ```js
-const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const result = users
+  .filter(user => user.age >= 18)
+  .map(user => user.name);
 
-const result = numbers
-  .filter(num => num % 2 === 0)      // even numbers
-  .map(num => num * 3)               // multiply by 3
-  .reduce((acc, curr) => acc + curr, 0); // sum
+console.log(result);
+// ["A", "C"]
+```
 
-console.log(result); // 90
+### Calculate total age
+
+```js
+const totalAge = users.reduce((sum, user) => {
+  return sum + user.age;
+}, 0);
+
+console.log(totalAge);
+// 62
 ```
 
 ---
 
-## 6. Interview Tips
+## Common Interview Question
 
-1. **map** vs **forEach** → map naya array return karta hai, forEach `undefined`
-2. **filter** hamesha boolean return kare (truthy/falsy)
-3. **reduce** mein `initialValue` dena best practice hai
-4. reduce se map aur filter dono bana sakte ho (advanced)
+> "Implement map, filter and reduce without using built-in methods."
+
+You can write:
+
+```js
+Array.prototype.myMap = function(callback) {
+  const result = [];
+
+  for (let i = 0; i < this.length; i++) {
+    result.push(callback(this[i], i, this));
+  }
+
+  return result;
+};
+
+
+Array.prototype.myFilter = function(callback) {
+  const result = [];
+
+  for (let i = 0; i < this.length; i++) {
+    if (callback(this[i], i, this)) {
+      result.push(this[i]);
+    }
+  }
+
+  return result;
+};
+
+
+Array.prototype.myReduce = function(callback, initialValue) {
+
+  let accumulator;
+  let startIndex;
+
+  if (arguments.length >= 2) {
+    accumulator = initialValue;
+    startIndex = 0;
+  } else {
+    accumulator = this[0];
+    startIndex = 1;
+  }
+
+  for (let i = startIndex; i < this.length; i++) {
+    accumulator = callback(
+      accumulator,
+      this[i],
+      i,
+      this
+    );
+  }
+
+  return accumulator;
+};
+```
+
+Then:
+
+```js
+const nums = [1, 2, 3, 4, 5];
+
+console.log(nums.myMap(x => x * 2));
+// [2, 4, 6, 8, 10]
+
+console.log(nums.myFilter(x => x % 2 === 0));
+// [2, 4]
+
+console.log(nums.myReduce((sum, x) => sum + x, 0));
+// 15
+```
 
 ---
 
-**Next:** In teeno ke **polyfill** likhenge (simple + with thisArg support).
+## Interview mein ek line mein:
+
+- **Map** = transform
+- **Filter** = select
+- **Reduce** = accumulate
+
+Aur polyfill ka basic pattern yaad rakh:
+
+```text
+prototype method
+      ↓
+create result/accumulator
+      ↓
+loop through array
+      ↓
+call callback
+      ↓
+return result
+```
+
+---
+
+**Note:** Real built-in methods mein additional edge-cases hote hain (sparse arrays, invalid this, missing initialValue etc.). Interview mein basic polyfill upar wala usually sufficient hai. Agar interviewer deep dive kare, tab edge cases explain karna.
