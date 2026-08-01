@@ -2,9 +2,24 @@
 
 Learning frontend development from the absolute basics with Grok.
 
-## Roadmap
+## Current Progress – JavaScript Fundamentals
 
-1. **JavaScript Basics** (we start here)
+We are building this repo **chapter by chapter**.
+
+### JavaScript Chapters (completed so far)
+
+| Chapter | Topic | Link |
+|---------|-------|------|
+| 01 | Scope, var vs let vs const | [View](./javascript/01-scope-var-let-const.md) |
+| 02 | Temporal Dead Zone Mechanics | [View](./javascript/02-temporal-dead-zone.md) |
+| 03 | TDZ + Hoisting Interview Questions (Q&A together) | [View](./javascript/03-tdz-hoisting-interview-questions.md) |
+| 04 | Coding Challenges on TDZ + Hoisting (Q&A together) | [View](./javascript/04-coding-challenges-tdz-hoisting.md) |
+
+---
+
+## Full Roadmap
+
+1. **JavaScript Basics** ← we are here
 2. HTML Fundamentals
 3. CSS & Styling
 4. DOM Manipulation
@@ -13,11 +28,11 @@ Learning frontend development from the absolute basics with Grok.
 
 ---
 
-### How we will learn
+### How we learn
 
-- I will give you questions / tasks
-- You solve them
-- We discuss the solution
-- Then move to the next level
+- Theory + examples
+- Interview questions with answers side-by-side
+- Coding challenges with solutions right after the question
+- Everything saved chapter-wise in this repo
 
-Let's go bro 💪
+Let's keep going bro 💪
