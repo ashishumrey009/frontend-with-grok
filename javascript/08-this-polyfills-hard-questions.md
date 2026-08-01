@@ -5,46 +5,49 @@ Phir problem batata hoon, phir Symbol wala improved version.
 
 ---
 
-## 1. Simple Polyfills (Bina Symbol ke) — Interview Style
+## 0. Sabse Important: Parameters ka Difference
+
+Bahut log yahan confuse hote hain. Clear difference:
+
+| Method     | Parameter Style       | Kyun? |
+|------------|-----------------------|-------|
+| **myCall** | `...args`             | Asli `call` mein arguments **individually** aate hain |
+| **myApply**| `argsArray`           | Asli `apply` mein arguments **ek array** mein aate hain |
+| **myBind** | `...args` + `...newArgs` | Bind ke time partial args individual aate hain, baad mein naye args |
+
+### Example se samajh:
+
+```js
+// call  → arguments alag-alag
+greet.call(user, "Hello", "!");
+
+// apply → arguments array mein
+greet.apply(user, ["Hello", "!"]);
+
+// bind  → partial arguments individual
+const bound = greet.bind(user, "Hello");
+bound("!");
+```
+
+Isliye polyfill mein bhi same pattern follow karte hain.
+
+---
+
+## 1. Simple Polyfills (Bina Symbol ke)
 
 ### 1.1 Simple `myCall`
 
 ```js
 Function.prototype.myCall = function(context, ...args) {
-  // context null ya undefined ho to globalThis le lo
   context = context || globalThis;
 
-  // function ko temporarily object ke andar daal do
   context.fn = this;
-
-  // ab call karo → this automatically context ban jayega
   const result = context.fn(...args);
-
-  // temporary property hata do
   delete context.fn;
 
   return result;
 };
 ```
-
-**Kaise kaam karta hai?**
-
-```js
-function greet(msg) {
-  console.log(msg + ", " + this.name);
-}
-
-const user = { name: "Ashish" };
-
-greet.myCall(user, "Hello"); // Hello, Ashish
-```
-
-Step-by-step:
-1. `user.fn = greet`  → user object ke andar fn method aa gaya
-2. `user.fn("Hello")` call hua → isliye `this` = user ban gaya
-3. `delete user.fn` → saaf kar diya
-
----
 
 ### 1.2 Simple `myApply`
 
@@ -53,17 +56,14 @@ Function.prototype.myApply = function(context, argsArray) {
   context = context || globalThis;
 
   context.fn = this;
-
   const result = context.fn(...(argsArray || []));
-
   delete context.fn;
+
   return result;
 };
 ```
 
----
-
-### 1.3 Simple `myBind`
+### 1.3 Simple `myBind` (with apply)
 
 ```js
 Function.prototype.myBind = function(context, ...args) {
@@ -75,25 +75,58 @@ Function.prototype.myBind = function(context, ...args) {
 };
 ```
 
-**Example:**
-```js
-function multiply(a, b) {
-  return a * b;
-}
+---
 
-const double = multiply.myBind(null, 2);
-console.log(double(5)); // 10
+## 2. `myBind` **bina apply/call** ke (Interview mein mana kare toh)
+
+Agar interviewer bole "apply mat use karna", toh yeh version:
+
+```js
+Function.prototype.myBind = function(context, ...args) {
+  const originalFn = this;
+
+  return function(...newArgs) {
+    context = context || globalThis;
+
+    // temporarily function daal do
+    context.fn = originalFn;
+
+    // normal call kar do
+    const result = context.fn(...args, ...newArgs);
+
+    delete context.fn;
+    return result;
+  };
+};
+```
+
+**Symbol ke saath (better):**
+
+```js
+Function.prototype.myBind = function(context, ...args) {
+  const originalFn = this;
+
+  return function(...newArgs) {
+    context = context || globalThis;
+
+    const key = Symbol();
+    context[key] = originalFn;
+
+    const result = context[key](...args, ...newArgs);
+
+    delete context[key];
+    return result;
+  };
+};
 ```
 
 ---
 
-## 2. Simple Version ki Problem (Isliye Symbol aata hai)
-
-Dekho yeh case:
+## 3. Simple Version ki Problem (Isliye Symbol aata hai)
 
 ```js
 const obj = {
-  fn: "main pehle se exist karta hoon"   // already property hai
+  fn: "main pehle se exist karta hoon"
 };
 
 function test() {
@@ -101,59 +134,61 @@ function test() {
 }
 
 test.myCall(obj);
+// Output: function test() {...}   ← conflict!
 ```
 
-**Output:** function test() { ... }   
-
-Kyunki humne `obj.fn = test` karke original value overwrite kar di.
-
-Yahi problem solve karne ke liye **Symbol** use hota hai.
+Isliye Symbol use karte hain — unique key milti hai jo kabhi clash nahi karti.
 
 ---
 
-## 3. Improved Version with Symbol
+## 4. Improved Versions with Symbol
+
+### myCall with Symbol
 
 ```js
 Function.prototype.myCall = function(context, ...args) {
   context = context || globalThis;
 
-  // Symbol unique key banata hai jo kabhi collide nahi karega
-  const uniqueKey = Symbol();
+  const key = Symbol();
+  context[key] = this;
 
-  context[uniqueKey] = this;
-
-  const result = context[uniqueKey](...args);
-
-  delete context[uniqueKey];
+  const result = context[key](...args);
+  delete context[key];
 
   return result;
 };
 ```
 
-**Symbol kyun use karte hain?**
-- Har `Symbol()` bilkul unique hota hai
-- Kabhi bhi existing property se clash nahi karega
-- Object ke normal keys (`for...in`, `Object.keys`) mein nahi dikhta
+### myApply with Symbol
 
-Yahi best practice hai production-level polyfill mein.
+```js
+Function.prototype.myApply = function(context, argsArray) {
+  context = context || globalThis;
+
+  const key = Symbol();
+  context[key] = this;
+
+  const result = context[key](...(argsArray || []));
+  delete context[key];
+
+  return result;
+};
+```
 
 ---
 
-## 4. Better `myBind` (jo `new` ko bhi handle kare)
-
-Interview mein advanced level pe yeh bhi poochhte hain:
+## 5. Better `myBind` (jo `new` ko bhi handle kare)
 
 ```js
 Function.prototype.myBind = function(context, ...args) {
   const originalFn = this;
 
   const boundFn = function(...newArgs) {
-    // Agar new ke saath call hua to bound context ignore karo
+    // new se call hua ho to this ko override mat karo
     const finalContext = this instanceof boundFn ? this : context;
     return originalFn.apply(finalContext, [...args, ...newArgs]);
   };
 
-  // prototype chain maintain karna (optional but good)
   if (originalFn.prototype) {
     boundFn.prototype = Object.create(originalFn.prototype);
   }
@@ -164,102 +199,37 @@ Function.prototype.myBind = function(context, ...args) {
 
 ---
 
-## 5. Hard Interview Questions (Q + Answer together)
+## 6. Hard Interview Questions (Q + Answer together)
 
-### Q1. Multiple bind kya hota hai?
-
+### Q1. Multiple bind
 ```js
-const obj1 = { name: "First" };
-const obj2 = { name: "Second" };
-
-function show() {
-  console.log(this.name);
-}
-
 const bound1 = show.bind(obj1);
 const bound2 = bound1.bind(obj2);
-
 bound2(); // ?
 ```
+**Answer:** Pehla wala `this` (obj1). Dusra bind ignore ho jata hai.
 
-**Answer:** `First`  
-**Reason:** Ek baar bind ho gaya to `this` permanently fix ho jata hai. Dusra bind ignore ho jata hai.
-
----
-
-### Q2. `bind` + `new` ka priority?
-
+### Q2. bind + new
 ```js
-function Person(name) {
-  this.name = name;
-}
-
 const BoundPerson = Person.bind({ age: 99 });
 const p = new BoundPerson("Ashish");
-
-console.log(p.name); // ?
-console.log(p.age);  // ?
+console.log(p.name); // Ashish
+console.log(p.age);  // undefined
 ```
+`new` ki priority higher hoti hai.
 
-**Answer:**  
-`Ashish`  
-`undefined`  
+### Q3. Arrow function + call/apply/bind
+Arrow function completely ignore karta hai. `this` change nahi hota.
 
-**Reason:** `new` binding ki priority `bind` se higher hoti hai.
-
----
-
-### Q3. Arrow function ko bind kar sakte ho?
-
+### Q4. Method extract / destructuring
 ```js
-const arrow = () => console.log(this.name);
-arrow.call({ name: "Grok" }); // ?
-```
-
-**Answer:** `undefined` (global this)  
-**Reason:** Arrow function `call`/`apply`/`bind` ko completely ignore karta hai for `this`.
-
----
-
-### Q4. Yeh output kya dega?
-
-```js
-const obj = {
-  name: "Ashish",
-  say() {
-    return () => console.log(this.name);
-  }
-};
-
-const fn = obj.say();
-fn(); // ?
-```
-
-**Answer:** `Ashish`  
-Kyunki arrow function `say` ke andar bana tha, isliye usne `this` = obj capture kar liya.
-
----
-
-### Q5. Destructuring se this kyun toot jata hai?
-
-```js
-const user = {
-  name: "Ashish",
-  greet() {
-    console.log(this.name);
-  }
-};
-
 const { greet } = user;
-greet(); // ?
+greet(); // undefined
 ```
-
-**Answer:** `undefined`  
-Method extract karte hi implicit binding toot jati hai.
 
 ---
 
-## 6. Hardcore Edge Cases Summary
+## 7. Hardcore Edge Cases Summary
 
 | Case                        | Result / Behavior                              |
 |----------------------------|------------------------------------------------|
@@ -272,57 +242,13 @@ Method extract karte hi implicit binding toot jati hai.
 
 ---
 
-## 7. Coding Challenges (Simple → Hard)
+## 8. Interview Strategy
 
-### Challenge 1 (Most Asked)
-Write simple polyfill of `bind` (bina Symbol ke).
-
-**Solution:**
-```js
-Function.prototype.myBind = function(context, ...args) {
-  const fn = this;
-  return function(...newArgs) {
-    return fn.apply(context, [...args, ...newArgs]);
-  };
-};
-```
-
-### Challenge 2
-Write `myCall` without using Symbol (simple version).
-
-**Solution:** (already shown in section 1.1)
-
-### Challenge 3
-Predict + fix:
-
-```js
-const person = {
-  name: "Ashish",
-  greet() {
-    console.log(this.name);
-  }
-};
-
-setTimeout(person.greet, 0); // currently undefined
-```
-
-**Fix:**
-```js
-setTimeout(person.greet.bind(person), 0);
-// or
-setTimeout(() => person.greet(), 0);
-```
-
----
-
-## 8. Interview Mein Kaise Approach Karein
-
-1. Pehle simple version likho (bina Symbol ke) — interviewer ko clear logic dikhao
-2. Phir problem batao (property collision)
-3. Phir Symbol wala improved version dikhao
-4. Agar time bache to `new` handling bhi add kar do in bind
-
-Yahi sequence sabse safe + impressive hota hai.
+1. Pehle simple version (bina Symbol) likho
+2. Problem batao (property collision)
+3. Symbol wala version dikhao
+4. Agar apply mana kare → section 2 wala version likho
+5. Time bache to `new` handling bhi add kar do
 
 ---
 
