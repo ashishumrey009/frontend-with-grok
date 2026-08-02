@@ -134,31 +134,64 @@ const _ = Symbol("placeholder");
 
 function curryWithPlaceholder(fn) {
   return function curried(...args) {
-    const hasPlaceholder = args.includes(_);
+    // Check if we have enough real arguments (no placeholders left)
+    const realArgsCount = args.filter(arg => arg !== _).length;
 
-    if (!hasPlaceholder && args.length >= fn.length) {
+    if (realArgsCount >= fn.length && !args.includes(_)) {
       return fn(...args);
     }
 
     return function (...nextArgs) {
-      const merged = args
-        .map(arg => (arg === _ && nextArgs.length ? nextArgs.shift() : arg))
-        .concat(nextArgs);
+      // Replace placeholders with new arguments
+      const mergedArgs = [];
+      let nextIndex = 0;
 
-      return curried(...merged);
+      for (let arg of args) {
+        if (arg === _ && nextIndex < nextArgs.length) {
+          mergedArgs.push(nextArgs[nextIndex++]);
+        } else {
+          mergedArgs.push(arg);
+        }
+      }
+
+      // Add remaining new arguments
+      while (nextIndex < nextArgs.length) {
+        mergedArgs.push(nextArgs[nextIndex++]);
+      }
+
+      return curried(...mergedArgs);
     };
   };
 }
+```
 
+**Usage:**
+
+```js
 function greet(greeting, name, punctuation) {
   return `${greeting}, ${name}${punctuation}`;
 }
 
 const curriedGreet = curryWithPlaceholder(greet);
 
+// Skip middle argument
 const greetHello = curriedGreet("Hello", _, "!");
 console.log(greetHello("Ashish")); // Hello, Ashish!
+
+// Skip first argument
+const greetAshish = curriedGreet(_, "Ashish", "!");
+console.log(greetAshish("Hi")); // Hi, Ashish!
+
+// Skip last argument
+const greetHiAshish = curriedGreet("Hi", "Ashish", _);
+console.log(greetHiAshish("!!!")); // Hi, Ashish!!!
 ```
+
+**Kaise kaam karta hai?**
+
+1. `_` placeholder ki tarah kaam karta hai
+2. Jab koi argument `_` hota hai, toh baad mein aane wale arguments uski jagah fill ho jate hain
+3. Jab saare real arguments mil jate hain aur koi placeholder nahi bachta, tab original function call hota hai
 
 ---
 
