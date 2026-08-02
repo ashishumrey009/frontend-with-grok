@@ -1,14 +1,12 @@
 # Chapter 14: Currying Deep Dive (Interview Style)
 
-Currying JavaScript interviews mein bahut common topic hai. Yeh functional programming ka important concept hai.
+Currying JavaScript interviews mein bahut common topic hai.
 
 ---
 
 ## 1. What is Currying?
 
-**Simple definition:**
-
-> Currying is a technique of converting a function that takes multiple arguments into a sequence of functions that each take a **single argument**.
+> Currying is converting a function that takes multiple arguments into a sequence of functions that each take a **single argument**.
 
 ```js
 // Normal
@@ -22,7 +20,8 @@ f(a)(b)(c)
 
 ```js
 const add = a => b => c => a + b + c;
-add(1)(2)(3); // 6
+
+console.log(add(1)(2)(3)); // 6
 ```
 
 ---
@@ -40,8 +39,8 @@ const multiply = a => b => a * b;
 const double = multiply(2);
 const triple = multiply(3);
 
-double(5); // 10
-triple(5); // 15
+console.log(double(5)); // 10
+console.log(triple(5)); // 15
 ```
 
 ---
@@ -54,6 +53,7 @@ function curry(fn) {
     if (args.length >= fn.length) {
       return fn(...args);
     }
+
     return function (...nextArgs) {
       return curried(...args, ...nextArgs);
     };
@@ -61,7 +61,7 @@ function curry(fn) {
 }
 ```
 
-**Usage:**
+### Usage
 
 ```js
 function sum(a, b, c) {
@@ -76,26 +76,24 @@ console.log(curriedSum(1)(2, 3));   // 6
 console.log(curriedSum(1, 2, 3));   // 6
 ```
 
-**Kaise kaam karta hai?**
+### Kaise kaam karta hai?
 
-1. `args.length >= fn.length` → enough arguments mil gaye toh original function chala do
-2. Warna naya function return karo jo baaki arguments wait kare
-3. `...args, ...nextArgs` se pehle aur naye arguments merge ho jate hain
+1. Agar arguments kaafi hain (`args.length >= fn.length`) → original function chala do
+2. Warna naya function return karo
+3. `...args, ...nextArgs` se arguments merge ho jate hain
 
 ---
 
 ## 4. Currying vs Partial Application
 
-| Feature     | Currying                      | Partial Application               |
-|-------------|-------------------------------|-----------------------------------|
-| Arguments   | One at a time                 | Multiple allowed at once          |
-| Form        | `f(a)(b)(c)`                  | `f(a, b)(c)` or `f(a)(b, c)`      |
+| Feature     | Currying                  | Partial Application              |
+|-------------|---------------------------|----------------------------------|
+| Arguments   | One at a time             | Multiple allowed at once         |
+| Form        | `f(a)(b)(c)`              | `f(a, b)(c)` or `f(a)(b, c)`     |
 
 ---
 
-## 5. Advanced Currying Options
-
-### 5.1 Infinite Currying
+## 5. Infinite Currying
 
 ```js
 function sum(a) {
@@ -105,13 +103,13 @@ function sum(a) {
   };
 }
 
-sum(1)(2)(3)(4)(); // 10
-sum(5)(10)(15)();  // 30
+console.log(sum(1)(2)(3)(4)()); // 10
+console.log(sum(5)(10)(15)());  // 30
 ```
 
 ---
 
-### 5.2 Infinite Currying (without last `()`)
+## 6. Infinite Currying (without last `()`)
 
 ```js
 function add(a) {
@@ -121,13 +119,13 @@ function add(a) {
   return next;
 }
 
-console.log(+add(1)(2)(3)(4));     // 10
-console.log(add(1)(2)(3)(4) + 0);  // 10
+console.log(+add(1)(2)(3)(4));    // 10
+console.log(add(1)(2)(3)(4) + 0); // 10
 ```
 
 ---
 
-### 5.3 Curry with Placeholder (Lodash style)
+## 7. Curry with Placeholder (Lodash style)
 
 ```js
 const _ = Symbol("placeholder");
@@ -163,7 +161,7 @@ function curry(fn) {
 }
 ```
 
-**Usage:**
+### Usage
 
 ```js
 function greet(greeting, name, punctuation) {
@@ -185,21 +183,22 @@ const greetHiAshish = curriedGreet("Hi", "Ashish", _);
 console.log(greetHiAshish("!!!")); // Hi, Ashish!!!
 ```
 
-**Kaise kaam karta hai?**
+### Kaise kaam karta hai?
 
 1. `_` placeholder ki tarah kaam karta hai
-2. Jab koi argument `_` hota hai → baad mein aane wale arguments uski jagah fill ho jate hain
+2. Jab argument `_` hota hai → baad mein aane wale arguments uski jagah fill hote hain
 3. Jab saare real arguments mil jate hain aur koi `_` nahi bachta → original function call hota hai
 
 ---
 
-### 5.4 Currying + Function Composition
+## 8. Currying + Function Composition
 
 ```js
-const compose = (...fns) => x => fns.reduceRight((acc, fn) => fn(acc), x);
+const compose = (...fns) => (x) =>
+  fns.reduceRight((acc, fn) => fn(acc), x);
 
-const add = a => b => a + b;
-const multiply = a => b => a * b;
+const add = (a) => (b) => a + b;
+const multiply = (a) => (b) => a * b;
 
 const add5 = add(5);
 const double = multiply(2);
@@ -211,11 +210,12 @@ console.log(process(10)); // 30
 
 ---
 
-### 5.5 Practical Examples
+## 9. Practical Examples
 
-**API Builder**
+### API Builder
+
 ```js
-const request = method => url => data =>
+const request = (method) => (url) => (data) =>
   fetch(url, {
     method,
     body: JSON.stringify(data),
@@ -228,24 +228,38 @@ const postUser = post("/api/users");
 postUser({ name: "Ashish" });
 ```
 
-**Validation**
-```js
-const minLength = min => value => value.length >= min;
-const maxLength = max => value => value.length <= max;
+### Validation
 
-const isValid = value => minLength(3)(value) && maxLength(20)(value);
+```js
+const minLength = (min) => (value) => value.length >= min;
+const maxLength = (max) => (value) => value.length <= max;
+
+const isValid = (value) =>
+  minLength(3)(value) && maxLength(20)(value);
+```
+
+### Discount Calculator
+
+```js
+const discount = (rate) => (price) => price - price * rate;
+
+const tenPercentOff = discount(0.1);
+const twentyPercentOff = discount(0.2);
+
+console.log(tenPercentOff(1000));    // 900
+console.log(twentyPercentOff(1000)); // 800
 ```
 
 ---
 
-## 6. Important Interview Questions
+## 10. Interview Questions
 
 **Q1. What is currying?**  
 Converting a multi-argument function into a chain of single-argument functions.
 
 **Q2. Currying vs Partial Application?**  
-Currying → one argument at a time.  
-Partial → some arguments fixed in advance.
+- Currying → one argument at a time  
+- Partial → some arguments fixed in advance
 
 **Q3. Write a generic curry function.**
 
@@ -262,8 +276,16 @@ function curry(fn) {
 }
 ```
 
-**Q4. Implement infinite currying.**  
-(See section 5.1)
+**Q4. Implement infinite currying.**
+
+```js
+function sum(a) {
+  return function (b) {
+    if (b === undefined) return a;
+    return sum(a + b);
+  };
+}
+```
 
 **Q5. How does curry use closures?**  
 Har returned function apne outer arguments ko remember karta hai.
@@ -271,9 +293,12 @@ Har returned function apne outer arguments ko remember karta hai.
 **Q6. What is arity?**  
 Number of parameters a function expects (`fn.length`).
 
+**Q7. Can we skip arguments in currying?**  
+Haan, placeholder (`_`) use karke.
+
 ---
 
-## 7. Key Takeaways
+## 11. Key Takeaways
 
 - Basic curry → `a => b => c => ...`
 - Generic curry → `fn.length` ke basis pe kaam karta hai
