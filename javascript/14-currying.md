@@ -52,24 +52,35 @@ triple(5); // 15
 function curry(fn) {
   return function curried(...args) {
     if (args.length >= fn.length) {
-      return fn.apply(this, args);
+      return fn(...args);
     }
     return function (...nextArgs) {
-      return curried.apply(this, args.concat(nextArgs));
+      return curried(...args, ...nextArgs);
     };
   };
 }
+```
 
+**Usage:**
+
+```js
 function sum(a, b, c) {
   return a + b + c;
 }
 
 const curriedSum = curry(sum);
 
-curriedSum(1)(2)(3);   // 6
-curriedSum(1, 2)(3);   // 6
-curriedSum(1)(2, 3);   // 6
+console.log(curriedSum(1)(2)(3));   // 6
+console.log(curriedSum(1, 2)(3));   // 6
+console.log(curriedSum(1)(2, 3));   // 6
+console.log(curriedSum(1, 2, 3));   // 6
 ```
+
+**Kaise kaam karta hai?**
+
+1. `args.length >= fn.length` → enough arguments mil gaye toh original function chala do
+2. Warna naya function return karo jo baaki arguments wait kare
+3. `...args, ...nextArgs` se pehle aur naye arguments merge ho jate hain
 
 ---
 
@@ -100,9 +111,7 @@ sum(5)(10)(15)();  // 30
 
 ---
 
-### 5.2 Infinite Currying (Better - with valueOf/toString)
-
-Kuch interviewers yeh version poochhte hain (jahan last `()` ki zaroorat nahi).
+### 5.2 Infinite Currying (without last `()`)
 
 ```js
 function add(a) {
@@ -120,8 +129,6 @@ console.log(add(1)(2)(3)(4) + 0);  // 10
 
 ### 5.3 Curry with Placeholder (Lodash style)
 
-Kabhi-kabhi arguments skip karne hote hain.
-
 ```js
 const _ = Symbol("placeholder");
 
@@ -130,15 +137,15 @@ function curryWithPlaceholder(fn) {
     const hasPlaceholder = args.includes(_);
 
     if (!hasPlaceholder && args.length >= fn.length) {
-      return fn.apply(this, args);
+      return fn(...args);
     }
 
     return function (...nextArgs) {
-      const merged = args.map(arg =>
-        arg === _ && nextArgs.length ? nextArgs.shift() : arg
-      ).concat(nextArgs);
+      const merged = args
+        .map(arg => (arg === _ && nextArgs.length ? nextArgs.shift() : arg))
+        .concat(nextArgs);
 
-      return curried.apply(this, merged);
+      return curried(...merged);
     };
   };
 }
@@ -151,29 +158,11 @@ const curriedGreet = curryWithPlaceholder(greet);
 
 const greetHello = curriedGreet("Hello", _, "!");
 console.log(greetHello("Ashish")); // Hello, Ashish!
-
-const greetAshish = curriedGreet(_, "Ashish", "!");
-console.log(greetAshish("Hi"));    // Hi, Ashish!
 ```
 
 ---
 
-### 5.4 Auto-Curry (variadic style)
-
-```js
-function autoCurry(fn) {
-  const curried = (...args) => {
-    if (args.length === 0) return curried;
-    if (args.length >= fn.length) return fn(...args);
-    return (...next) => curried(...args, ...next);
-  };
-  return curried;
-}
-```
-
----
-
-### 5.5 Currying + Function Composition
+### 5.4 Currying + Function Composition
 
 ```js
 const compose = (...fns) => x => fns.reduceRight((acc, fn) => fn(acc), x);
@@ -186,51 +175,14 @@ const double = multiply(2);
 
 const process = compose(double, add5);
 
-console.log(process(10)); // (10 + 5) * 2 = 30
+console.log(process(10)); // 30
 ```
 
 ---
 
-### 5.6 Object-style / Named parameters (pseudo-currying)
+### 5.5 Practical Examples
 
-```js
-const createUrl = ({ base, path, query }) => {
-  return `${base}/${path}?${new URLSearchParams(query)}`;
-};
-
-// Partial-like usage
-const githubApi = (path) => (query) =>
-  createUrl({ base: "https://api.github.com", path, query });
-
-const getUsers = githubApi("users");
-console.log(getUsers({ per_page: 10 }));
-```
-
----
-
-### 5.7 Practical Advanced Examples
-
-**Logging levels**
-```js
-const log = level => message => timestamp =>
-  console.log(`[${timestamp}] ${level}: ${message}`);
-
-const info = log("INFO");
-const errorLog = log("ERROR");
-
-info("Server started")(new Date().toISOString());
-```
-
-**Validation**
-```js
-const minLength = min => value => value.length >= min;
-const maxLength = max => value => value.length <= max;
-
-const isUsernameValid = value =>
-  minLength(3)(value) && maxLength(20)(value);
-```
-
-**API Request builder**
+**API Builder**
 ```js
 const request = method => url => data =>
   fetch(url, {
@@ -245,6 +197,14 @@ const postUser = post("/api/users");
 postUser({ name: "Ashish" });
 ```
 
+**Validation**
+```js
+const minLength = min => value => value.length >= min;
+const maxLength = max => value => value.length <= max;
+
+const isValid = value => minLength(3)(value) && maxLength(20)(value);
+```
+
 ---
 
 ## 6. Important Interview Questions
@@ -256,20 +216,29 @@ Converting a multi-argument function into a chain of single-argument functions.
 Currying → one argument at a time.  
 Partial → some arguments fixed in advance.
 
-**Q3. Write a generic curry function.**  
-(See section 3)
+**Q3. Write a generic curry function.**
+
+```js
+function curry(fn) {
+  return function curried(...args) {
+    if (args.length >= fn.length) {
+      return fn(...args);
+    }
+    return function (...nextArgs) {
+      return curried(...args, ...nextArgs);
+    };
+  };
+}
+```
 
 **Q4. Implement infinite currying.**  
 (See section 5.1)
 
 **Q5. How does curry use closures?**  
-Har returned function apne outer arguments ko remember karta hai (closure).
+Har returned function apne outer arguments ko remember karta hai.
 
 **Q6. What is arity?**  
 Number of parameters a function expects (`fn.length`).
-
-**Q7. Can we use placeholders in curry?**  
-Yes (Lodash style). Advanced interviews mein poochha jata hai.
 
 ---
 
