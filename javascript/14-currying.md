@@ -132,34 +132,32 @@ console.log(add(1)(2)(3)(4) + 0);  // 10
 ```js
 const _ = Symbol("placeholder");
 
-function curryWithPlaceholder(fn) {
+function curry(fn) {
   return function curried(...args) {
-    // Check if we have enough real arguments (no placeholders left)
-    const realArgsCount = args.filter(arg => arg !== _).length;
-
-    if (realArgsCount >= fn.length && !args.includes(_)) {
+    // Check if all arguments are available
+    if (args.length >= fn.length && !args.includes(_)) {
       return fn(...args);
     }
 
     return function (...nextArgs) {
-      // Replace placeholders with new arguments
-      const mergedArgs = [];
-      let nextIndex = 0;
+      const newArgs = [...args];
+      let j = 0;
 
-      for (let arg of args) {
-        if (arg === _ && nextIndex < nextArgs.length) {
-          mergedArgs.push(nextArgs[nextIndex++]);
-        } else {
-          mergedArgs.push(arg);
+      // Replace placeholders
+      for (let i = 0; i < newArgs.length; i++) {
+        if (newArgs[i] === _ && j < nextArgs.length) {
+          newArgs[i] = nextArgs[j];
+          j++;
         }
       }
 
-      // Add remaining new arguments
-      while (nextIndex < nextArgs.length) {
-        mergedArgs.push(nextArgs[nextIndex++]);
+      // Add remaining arguments
+      while (j < nextArgs.length) {
+        newArgs.push(nextArgs[j]);
+        j++;
       }
 
-      return curried(...mergedArgs);
+      return curried(...newArgs);
     };
   };
 }
@@ -172,7 +170,7 @@ function greet(greeting, name, punctuation) {
   return `${greeting}, ${name}${punctuation}`;
 }
 
-const curriedGreet = curryWithPlaceholder(greet);
+const curriedGreet = curry(greet);
 
 // Skip middle argument
 const greetHello = curriedGreet("Hello", _, "!");
@@ -190,8 +188,8 @@ console.log(greetHiAshish("!!!")); // Hi, Ashish!!!
 **Kaise kaam karta hai?**
 
 1. `_` placeholder ki tarah kaam karta hai
-2. Jab koi argument `_` hota hai, toh baad mein aane wale arguments uski jagah fill ho jate hain
-3. Jab saare real arguments mil jate hain aur koi placeholder nahi bachta, tab original function call hota hai
+2. Jab koi argument `_` hota hai → baad mein aane wale arguments uski jagah fill ho jate hain
+3. Jab saare real arguments mil jate hain aur koi `_` nahi bachta → original function call hota hai
 
 ---
 
