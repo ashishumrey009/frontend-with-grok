@@ -23,7 +23,8 @@ We are building this repo **chapter by chapter**.
 | 11 | Functions Deep Dive | [View](./javascript/11-functions-deep-dive.md) |
 | 12 | Spread vs Rest Operator | [View](./javascript/12-spread-vs-rest.md) |
 | 13 | Arrow Functions + this | [View](./javascript/13-arrow-functions.md) |
-| 14 | **Currying Deep Dive** | [View](./javascript/14-currying.md) |
+| 14 | Currying Deep Dive | [View](./javascript/14-currying.md) |
+| 15 | **Objects Deep Dive** | [View](./javascript/15-objects.md) |
 
 ---
 
