@@ -1,344 +1,430 @@
-# Chapter 16: Promises Deep Dive + Polyfill (Interview Style)
+# Chapter 16: Promises Deep Dive + Polyfill (Interview Conversation Style)
 
-Interview mein Promises almost guaranteed topic hai. Yahan pe pure depth mein samjhate hain — jaise tum interviewer ko explain kar rahe ho.
-
----
-
-## 1. Promise kya hota hai? (Simple Definition)
-
-> A **Promise** is an object that represents the eventual completion (or failure) of an asynchronous operation and its resulting value.
-
-Simple words mein:
-
-Promise ek **placeholder** hai future value ka.  
-Woh value abhi nahi mili, lekin baad mein milegi (ya error aayega).
-
-### Real life analogy:
-Tumne pizza order kiya.
-- Order place kiya → **Pending**
-- Pizza aa gaya → **Fulfilled** (resolved)
-- Pizza cancel / error → **Rejected**
+Bhai, ekdum interview style mein — jaise real conversation ho!
 
 ---
 
-## 2. Promise ke 3 States
+## Interviewer: "Promise ka Polyfill banao"
 
-| State       | Meaning                          | Kab hota hai              |
-|-------------|----------------------------------|---------------------------|
-| **Pending** | Initial state                    | Abhi tak settle nahi hua  |
-| **Fulfilled** | Successfully completed         | `resolve()` call hua      |
-| **Rejected**  | Failed                         | `reject()` call hua       |
+**Tum:**
 
-Ek baar promise **settled** (fulfilled ya rejected) ho gaya, toh uska state **change nahi** hota.
+"Sure! Before coding, let me quickly walk you through my approach."
+
+"Promise basically ek object hai jo ek async operation ka future result represent karta hai. Iske 3 states hote hain — `pending`, `fulfilled`, `rejected`. Aur ek baar state change ho jaye toh dobara nahi badalti."
+
+"Toh main basically ek class banunga jo yahi behavior implement kare."
 
 ---
 
-## 3. Promise kaise banate hain?
+### Step 1 — Constructor
 
 ```js
-const promise = new Promise((resolve, reject) => {
-  // async operation yahan
-  const success = true;
+class MyPromise {
+  constructor(executor) {
+    this.state = "pending";
+    this.value = undefined;
+    this.reason = undefined;
+    this.onFulfilledCallbacks = [];
+    this.onRejectedCallbacks = [];
+```
 
-  if (success) {
-    resolve("Data mil gaya");   // fulfilled
-  } else {
-    reject("Kuch error aa gaya"); // rejected
-  }
+**Interviewer:** "Yeh callbacks array kyun rakha?"
+
+**Tum:**
+
+"Great question! Dekho — Promise mostly async hota hai. Matlab jab hum `.then()` likhte hain, tab tak Promise ka result aaya hi nahi hota. Toh agar main callbacks store nahi karunga toh woh lost ho jaayenge!"
+
+"Example se samjho:"
+
+```js
+const p = new MyPromise((resolve) => {
+  setTimeout(() => resolve("data"), 1000);
+  // 1 second baad resolve hoga
 });
+
+p.then(val => console.log(val));
+// .then() ABHI call hua
+// but resolve 1 second BAAD hoga!
+// Isliye callback store karna padega!
 ```
 
-- `resolve(value)` → promise successful
-- `reject(error)` → promise failed
+"Isliye array rakha — baad mein jab resolve/reject call ho tab yeh sab chalenge!"
 
 ---
 
-## 4. Promise ko consume kaise karein?
-
-### `.then()` + `.catch()`
+### Step 2 — resolve aur reject
 
 ```js
-promise
-  .then((result) => {
-    console.log(result); // "Data mil gaya"
-  })
-  .catch((error) => {
-    console.log(error);  // error handle
-  })
-  .finally(() => {
-    console.log("Ye hamesha chalega");
-  });
-```
-
-### Async/Await (modern way)
-
-```js
-async function getData() {
-  try {
-    const result = await promise;
-    console.log(result);
-  } catch (error) {
-    console.log(error);
-  } finally {
-    console.log("Ye hamesha chalega");
+const resolve = (value) => {
+  if (this.state === "pending") {
+    this.state = "fulfilled";
+    this.value = value;
+    this.onFulfilledCallbacks.forEach(fn => fn(value));
   }
-}
-```
+};
 
----
-
-## 5. Promise Chaining
-
-Har `.then()` ek **naya promise** return karta hai.
-
-```js
-Promise.resolve(5)
-  .then((num) => num * 2)      // 10
-  .then((num) => num + 3)      // 13
-  .then((num) => console.log(num));
-```
-
-Agar beech mein error aaye toh seedha `.catch()` pe jump karta hai.
-
----
-
-## 6. Important Promise Methods
-
-### Promise.all()
-
-Saare promises **successful** hone chahiye. Ek bhi fail hua toh poora fail.
-
-```js
-Promise.all([
-  Promise.resolve(1),
-  Promise.resolve(2),
-  Promise.resolve(3)
-]).then(console.log); // [1, 2, 3]
-
-Promise.all([
-  Promise.resolve(1),
-  Promise.reject("Error"),
-  Promise.resolve(3)
-]).catch(console.log); // "Error"
-```
-
-### Promise.allSettled()
-
-Saare settle hone ka wait karta hai (success ya fail dono).
-
-```js
-Promise.allSettled([
-  Promise.resolve(1),
-  Promise.reject("Error")
-]).then(console.log);
-
-/*
-[
-  { status: "fulfilled", value: 1 },
-  { status: "rejected", reason: "Error" }
-]
-*/
-```
-
-### Promise.race()
-
-Jo **sabse pehle** settle ho, uska result.
-
-```js
-Promise.race([
-  new Promise(r => setTimeout(() => r("fast"), 100)),
-  new Promise(r => setTimeout(() => r("slow"), 500))
-]).then(console.log); // "fast"
-```
-
-### Promise.any()
-
-Jo **sabse pehle successful** ho. Agar saare fail ho jayein toh AggregateError.
-
----
-
-## 7. Common Interview Questions (Q + A)
-
-**Q1. Promise kya hota hai?**  
-Promise ek object hai jo asynchronous operation ke future result ko represent karta hai. Uske 3 states hote hain: pending, fulfilled, rejected.
-
-**Q2. Promise vs Callback mein difference?**  
-- Callbacks → inversion of control + callback hell  
-- Promises → better error handling, chaining, readable code
-
-**Q3. `.then()` kya return karta hai?**  
-Hamesha ek **naya Promise**.
-
-**Q4. Promise.all vs Promise.allSettled?**  
-- `all` → ek bhi fail hua toh poora reject  
-- `allSettled` → saare settle hone ka wait, result array deta hai
-
-**Q5. Promise.race vs Promise.any?**  
-- `race` → pehla settle (success ya fail)  
-- `any` → pehla **successful**
-
-**Q6. Kya promise ke state ko baad mein change kar sakte ho?**  
-Nahi. Ek baar settled ho gaya toh permanent.
-
-**Q7. `finally()` kab chalta hai?**  
-Hamesha — success ho ya fail.
-
-**Q8. Microtask vs Macrotask?**  
-Promise callbacks **microtask** queue mein jate hain (setTimeout se pehle chalte hain).
-
-```js
-console.log("start");
-
-setTimeout(() => console.log("timeout"), 0);
-
-Promise.resolve().then(() => console.log("promise"));
-
-console.log("end");
-
-// Output: start → end → promise → timeout
-```
-
----
-
-## 8. Promise Polyfill (Interview Style)
-
-Interview mein basic Promise polyfill poochhte hain. Yeh simple version hai:
-
-```js
-function MyPromise(executor) {
-  let onResolve, onReject;
-  let isFulfilled = false;
-  let isRejected = false;
-  let isCalled = false;
-  let value;
-  let error;
-
-  function resolve(val) {
-    isFulfilled = true;
-    value = val;
-
-    if (typeof onResolve === "function" && !isCalled) {
-      onResolve(value);
-      isCalled = true;
-    }
+const reject = (reason) => {
+  if (this.state === "pending") {
+    this.state = "rejected";
+    this.reason = reason;
+    this.onRejectedCallbacks.forEach(fn => fn(reason));
   }
-
-  function reject(err) {
-    isRejected = true;
-    error = err;
-
-    if (typeof onReject === "function" && !isCalled) {
-      onReject(error);
-      isCalled = true;
-    }
-  }
-
-  this.then = function (callback) {
-    onResolve = callback;
-
-    if (isFulfilled && !isCalled) {
-      onResolve(value);
-      isCalled = true;
-    }
-    return this; // basic chaining support
-  };
-
-  this.catch = function (callback) {
-    onReject = callback;
-
-    if (isRejected && !isCalled) {
-      onReject(error);
-      isCalled = true;
-    }
-    return this;
-  };
-
-  try {
-    executor(resolve, reject);
-  } catch (err) {
-    reject(err);
-  }
-}
+};
 ```
 
-### Test
+**Interviewer:** "Yeh `if(state === 'pending')` kyun check kiya?"
+
+**Tum:**
+
+"Yeh Promise ki core property hai — **immutability of state**."
+
+"Ek baar Promise resolve ho gaya toh dobara resolve ya reject nahi ho sakta. Bina is check ke yeh ho sakta tha:"
 
 ```js
 const p = new MyPromise((resolve, reject) => {
-  setTimeout(() => {
-    resolve("Success!");
-  }, 1000);
+  resolve("first");   // ✅ yeh chalega
+  reject("second");   // ❌ yeh nahi chalna chahiye!
+  resolve("third");   // ❌ yeh bhi nahi!
+});
+```
+
+"Is guard ke saath sirf pehla wala chalega — baaki ignore ho jaayenge!"
+
+**Interviewer:** "Yeh `forEach` kyun?"
+
+**Tum:**
+
+"Kyunki ek Promise pe multiple `.then()` lag sakte hain!"
+
+```js
+const p = new MyPromise((resolve) => {
+  setTimeout(() => resolve("data"), 1000);
 });
 
-p.then((res) => console.log(res))   // Success!
- .catch((err) => console.log(err));
+p.then(val => console.log("First:", val));
+p.then(val => console.log("Second:", val));
+p.then(val => console.log("Third:", val));
+// Teeno chalenge!
+```
+
+"Isliye array mein store kiye — `forEach` se saare ek saath chalenge!"
+
+---
+
+### Step 3 — Executor try-catch
+
+```js
+try {
+  executor(resolve, reject);
+} catch (err) {
+  reject(err);
+}
+```
+
+**Interviewer:** "try-catch kyun wrap kiya?"
+
+**Tum:**
+
+"Defensive programming! Agar executor ke andar koi synchronous error aaye toh Promise automatically reject ho jaye."
+
+```js
+const p = new MyPromise((resolve) => {
+  throw new Error("Oops!"); // executor mein error!
+});
+
+p.catch(err => console.log(err.message));
+// "Oops!" ← try-catch ki wajah se catch hua!
+```
+
+"Bina try-catch ke yeh error unhandled reh jaata!"
+
+---
+
+### Step 4 — `.then()`
+
+```js
+then(onFulfilled, onRejected) {
+  onFulfilled = typeof onFulfilled === "function"
+    ? onFulfilled
+    : value => value;
+
+  onRejected = typeof onRejected === "function"
+    ? onRejected
+    : reason => { throw reason; };
+
+  return new MyPromise((resolve, reject) => {
+    if (this.state === "fulfilled") {
+      try {
+        resolve(onFulfilled(this.value));
+      } catch (err) {
+        reject(err);
+      }
+    }
+
+    if (this.state === "rejected") {
+      try {
+        resolve(onRejected(this.reason));
+      } catch (err) {
+        reject(err);
+      }
+    }
+
+    if (this.state === "pending") {
+      this.onFulfilledCallbacks.push(() => {
+        try {
+          resolve(onFulfilled(this.value));
+        } catch (err) {
+          reject(err);
+        }
+      });
+
+      this.onRejectedCallbacks.push(() => {
+        try {
+          resolve(onRejected(this.reason));
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+  });
+}
+```
+
+**Interviewer:** "Yeh `typeof` check kyun?"
+
+**Tum:**
+
+"Yeh Promise chaining ke liye zaroori hai. Kabhi kabhi log `.then()` mein function nahi dete:"
+
+```js
+promise
+  .then()                      // kuch nahi diya!
+  .then(val => console.log(val)); // phir bhi kaam kare!
+```
+
+"Agar main check nahi karunga aur directly `onFulfilled(value)` call karunga toh crash ho jaayega."
+
+"Toh default de deta hoon — value ko aage pass karo, error ko aage throw karo. Isse **transparent passthrough** kehte hain!"
+
+**Interviewer:** "Naya Promise kyun return kar rahe ho?"
+
+**Tum:**
+
+"Yahi chaining ka secret hai! Agar main naya Promise return nahi karunga toh yeh nahi ho sakta:"
+
+```js
+promise
+  .then(val => val + 1)
+  .then(val => val + 1)
+  .then(val => val + 1);
+```
+
+"Har `.then()` naya Promise return karta hai jis pe agla `.then()` lag sakta hai. Yahi chaining hai!"
+
+**Interviewer:** "3 cases kyun hain?"
+
+**Tum:**
+
+"Timing ki wajah se! `.then()` kab call hoga pata nahi:"
+
+**Case 1 — Already fulfilled** (Synchronous Promise)
+
+```js
+const p = new MyPromise((resolve) => {
+  resolve("sync!"); // synchronous resolve
+});
+p.then(val => console.log(val));
+// state pehle se fulfilled hai!
+```
+
+**Case 2 — Already rejected**
+
+Same logic — pehle se reject ho chuka tha.
+
+**Case 3 — Pending** (Async Promise)
+
+```js
+const p = new MyPromise((resolve) => {
+  setTimeout(() => resolve("async!"), 1000);
+});
+p.then(val => console.log(val));
+// state abhi pending hai!
+// callback store karo!
 ```
 
 ---
 
-## 9. Better Polyfill Points (Interview mein bolna)
+### Step 5 — `.catch()` aur `.finally()`
 
-Upar wala **basic** version hai. Real Promise mein yeh extra cheezein hoti hain:
-
-1. Proper chaining (`then` hamesha naya promise return kare)
-2. Multiple `then` callbacks support
-3. Async resolution (microtask)
-4. `finally` support
-5. `Promise.resolve` / `Promise.reject` static methods
-
-Agar interviewer advanced maange toh bolna:
-
-> "Basic version mein state + then/catch handle kiya hai. Production level pe chaining aur microtask queue bhi implement karni padti hai."
-
----
-
-## 10. Output Based Questions (Practice)
-
-**Q1.**
 ```js
-console.log(1);
-
-Promise.resolve().then(() => console.log(2));
-
-console.log(3);
-
-// Output: 1 3 2
-```
-
-**Q2.**
-```js
-Promise.resolve(1)
-  .then((x) => x + 1)
-  .then((x) => { throw new Error("Error") })
-  .then((x) => console.log(x))
-  .catch((err) => console.log(err.message));
-
-// Output: Error
-```
-
-**Q3.**
-```js
-async function test() {
-  return 5;
+catch(onRejected) {
+  return this.then(null, onRejected);
 }
 
-test().then(console.log); // 5
+finally(callback) {
+  return this.then(
+    value => {
+      callback();
+      return value;
+    },
+    reason => {
+      callback();
+      throw reason;
+    }
+  );
+}
+```
+
+**Interviewer:** "`.catch()` itna chhota kyun hai?"
+
+**Tum:**
+
+"Kyunki `.catch()` basically `.then()` ka shortcut hai! `.then()` ke 2 arguments hote hain — success aur failure. `.catch()` sirf failure handle karta hai toh pehla argument `null` de do — kaam ho gaya!"
+
+**Interviewer:** "`finally` mein value return aur reason throw kyun?"
+
+**Tum:**
+
+"Kyunki `.finally()` chain ko break nahi karna chahiye!"
+
+```js
+promise
+  .then(val => val + 1)
+  .finally(() => console.log("cleanup!"))
+  .then(val => console.log(val)); // yeh bhi chalna chahiye!
+```
+
+"Agar main value return nahi karunga toh chain toot jaayegi — agla `.then()` undefined milega!"
+
+"Aur error throw karna isliye zaroori hai taaki `.catch()` usse pakad sake!"
+
+---
+
+### Interviewer: "Koi edge case?"
+
+**Tum:**
+
+"Haan! 3 important edge cases hain:"
+
+```js
+// Edge Case 1: Resolve ke baad reject
+new MyPromise((resolve, reject) => {
+  resolve("first");   // ✅ chalega
+  reject("ignored");  // ❌ ignore hoga
+});
+
+// Edge Case 2: then() mein error
+new MyPromise((resolve) => resolve(1))
+  .then(val => { throw new Error("oops!") })
+  .catch(err => console.log(err.message));
+// "oops!" ← try-catch ne pakda!
+
+// Edge Case 3: then() bina argument ke
+new MyPromise((resolve) => resolve(42))
+  .then()
+  .then(val => console.log(val)); // 42 ← passthrough!
 ```
 
 ---
 
-## 11. Key Takeaways (Interview ke liye)
+## Full Working Code (Ek saath)
 
-- Promise = future value ka representative
-- 3 states: pending → fulfilled / rejected
-- `.then()` hamesha naya promise return karta hai
-- `Promise.all` → fail-fast
-- `Promise.allSettled` → sabka result chahiye
-- Promises microtask queue mein chalte hain
-- Polyfill mein minimum: state + resolve/reject + then/catch
+```js
+class MyPromise {
+  constructor(executor) {
+    this.state = "pending";
+    this.value = undefined;
+    this.reason = undefined;
+    this.onFulfilledCallbacks = [];
+    this.onRejectedCallbacks = [];
+
+    const resolve = (value) => {
+      if (this.state === "pending") {
+        this.state = "fulfilled";
+        this.value = value;
+        this.onFulfilledCallbacks.forEach(fn => fn(value));
+      }
+    };
+
+    const reject = (reason) => {
+      if (this.state === "pending") {
+        this.state = "rejected";
+        this.reason = reason;
+        this.onRejectedCallbacks.forEach(fn => fn(reason));
+      }
+    };
+
+    try {
+      executor(resolve, reject);
+    } catch (err) {
+      reject(err);
+    }
+  }
+
+  then(onFulfilled, onRejected) {
+    onFulfilled = typeof onFulfilled === "function" ? onFulfilled : value => value;
+    onRejected = typeof onRejected === "function" ? onRejected : reason => { throw reason; };
+
+    return new MyPromise((resolve, reject) => {
+      if (this.state === "fulfilled") {
+        try {
+          resolve(onFulfilled(this.value));
+        } catch (err) {
+          reject(err);
+        }
+      }
+
+      if (this.state === "rejected") {
+        try {
+          resolve(onRejected(this.reason));
+        } catch (err) {
+          reject(err);
+        }
+      }
+
+      if (this.state === "pending") {
+        this.onFulfilledCallbacks.push(() => {
+          try {
+            resolve(onFulfilled(this.value));
+          } catch (err) {
+            reject(err);
+          }
+        });
+
+        this.onRejectedCallbacks.push(() => {
+          try {
+            resolve(onRejected(this.reason));
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }
+    });
+  }
+
+  catch(onRejected) {
+    return this.then(null, onRejected);
+  }
+
+  finally(callback) {
+    return this.then(
+      value => {
+        callback();
+        return value;
+      },
+      reason => {
+        callback();
+        throw reason;
+      }
+    );
+  }
+}
+```
 
 ---
 
-**Related Chapters:**  
-- [05 - Closures](./05-closures-deep-dive.md)  
-- [11 - Functions Deep Dive](./11-functions-deep-dive.md)
+## Ek Line Summary (Interview mein yeh bolna)
+
+> "Promise ek state machine hai — pending se fulfilled ya rejected. Callbacks array isliye kyunki async hai. `then()` naya Promise return karta hai isliye chaining possible hai. Aur 3 cases isliye kyunki timing unpredictable hai!"
+
+Bhai yeh bol diya toh interviewer impress ho jaayega!
