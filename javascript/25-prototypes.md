@@ -2,108 +2,85 @@
 
 **Interviewer:** Prototypes explain karo.
 
-**Tum:**
+**Tum (Kahani style):**
 
-"JavaScript mein har object ke paas ek hidden property hoti hai → `[[Prototype]]`. Isse hum `.__proto__` se access karte hain.
+```
+Socho ek family hai.
 
-Jab tum kisi object pe property/method access karte ho:
-1. Pehle **us object** mein dhundhta hai
-2. Nahi mili toh uske **prototype** mein dhundhta hai
-3. Wahan bhi nahi mili toh uske prototype ke prototype mein...
-4. `null` tak jaata hai
+Dada ke paas ek bada ghar hai. 🏠
+Papa ke paas car hai. 🚗
+Tum ke paas phone hai. 📱
 
-Is pure chain ko **Prototype Chain** kehte hain."
+Tum ghar use kar sakte ho → Dada se mila!
+Tum car use kar sakte ho → Papa se mila!
 
----
+JavaScript mein yahi Prototype hai!
 
-## 1. Simple Example
-
-```js
-const animal = {
-  eats: true,
-  walk() {
-    console.log("Animal walking");
-  }
-};
-
-const dog = {
-  barks: true
-};
-
-// dog ka prototype animal bana diya
-dog.__proto__ = animal;
-
-console.log(dog.barks);  // true  (khud ke paas)
-console.log(dog.eats);   // true  (prototype se mila)
-dog.walk();              // Animal walking
+"Jo cheez mere paas nahi hai,
+ main apne PARENT se maangta hoon!"
 ```
 
 ---
 
-## 2. `__proto__` vs `prototype` (Bahut Confused karne wala)
+## 1. Har Object ka ek `__proto__` hota hai
 
-| Cheez              | Kya hai?                                      | Kispe milta hai?       |
-|--------------------|-----------------------------------------------|------------------------|
-| `__proto__`        | Object ka actual prototype                    | Har object pe          |
-| `prototype`        | Constructor function ki property              | Sirf functions pe      |
+```js
+const obj = { name: "Ashish" };
+
+console.log(obj.__proto__);
+// → Object.prototype
+// Yeh uska "parent" hai!
+
+// Matlab:
+// obj ke paas "toString" nahi hai
+// but phir bhi kaam karta hai:
+obj.toString(); // "[object Object]"
+// Kyun? __proto__ se mila!
+```
+
+---
+
+## 2. Prototype Chain — Kahani
+
+```
+obj
+ └── __proto__ → Object.prototype
+                  └── __proto__ → null
+                                   ↑
+                              Chain khatam!
+
+Jab obj.something dhundha:
+  1. obj mein hai? → use karo ✅
+  2. obj.__proto__ mein hai? → use karo ✅
+  3. Object.prototype mein hai? → use karo ✅
+  4. null → undefined return karo ❌
+```
+
+---
+
+## 3. Function ka `prototype`
 
 ```js
 function Person(name) {
   this.name = name;
 }
 
+Person.prototype.greet = function () {
+  console.log("Hello! Main hoon", this.name);
+};
+
 const p1 = new Person("Ashish");
+const p2 = new Person("Rahul");
+
+p1.greet(); // "Hello! Main hoon Ashish"
+p2.greet(); // "Hello! Main hoon Rahul"
+
+// greet() dono ke paas hai?
+// NAHI! Sirf Person.prototype pe hai!
+// Dono share karte hain! ✅
 
 console.log(p1.__proto__ === Person.prototype); // true
-console.log(Person.prototype.__proto__ === Object.prototype); // true
-console.log(Object.prototype.__proto__); // null
-```
-
-**Yaad rakhne ka tarika:**
-- `prototype` → **function** ki property (blueprint)
-- `__proto__` → **object** ka prototype link
-
----
-
-## 3. Prototype Chain Visual
-
-```
-p1
-  ↓ __proto__
-Person.prototype
-  ↓ __proto__
-Object.prototype
-  ↓ __proto__
-null
-```
-
----
-
-## 4. Constructor Function + Prototype (Classic Way)
-
-```js
-function Person(name, age) {
-  this.name = name;
-  this.age = age;
-}
-
-// Methods prototype pe daalo (memory efficient)
-Person.prototype.greet = function () {
-  console.log(`Hi, I am ${this.name}`);
-};
-
-Person.prototype.isAdult = function () {
-  return this.age >= 18;
-};
-
-const p1 = new Person("Ashish", 25);
-const p2 = new Person("Rahul", 17);
-
-p1.greet();           // Hi, I am Ashish
-console.log(p2.isAdult()); // false
-
-// Dono objects same method share kar rahe hain
-console.log(p1.greet === p2.greet); // true
+console.log(p1.greet === p2.greet); // true (same function)
 ```
 
 **Kyun prototype pe method daalte hain?**
@@ -113,147 +90,279 @@ console.log(p1.greet === p2.greet); // true
 
 ---
 
-## 5. `Object.create()` se Inheritance
+## 4. `__proto__` vs `prototype` (Sabse Confused)
+
+| Cheez         | Kya hai?                         | Kispe milta hai?    |
+|---------------|----------------------------------|---------------------|
+| `__proto__`   | Object ka actual prototype link  | Har object pe       |
+| `prototype`   | Constructor ka blueprint         | Sirf functions pe   |
 
 ```js
-const animal = {
-  eats: true,
-  walk() {
-    console.log("Walking");
-  }
-};
+function Person(name) {
+  this.name = name;
+}
+const p = new Person("Ashish");
 
-const rabbit = Object.create(animal);
-rabbit.jumps = true;
+// Connection:
+p.__proto__ === Person.prototype; // true ✅
 
-console.log(rabbit.eats);  // true (prototype se)
-rabbit.walk();             // Walking
+// Simple yaad rakho:
+// prototype → "Parent ka ghar"
+// __proto__  → "Mera baap kaun hai"
 ```
-
-`Object.create(proto)` → naya object banata hai jiska prototype `proto` hota hai.
 
 ---
 
-## 6. Modern `class` bhi Prototype pe based hai
+## 5. `new` keyword ke andar kya hota hai?
 
 ```js
-class Person {
+function Person(name) {
+  this.name = name;
+}
+
+const p = new Person("Ashish");
+
+// new ke andar yeh hota hai:
+// 1. Ek naya empty object banao {}
+// 2. __proto__ set karo Person.prototype se
+// 3. this = naya object
+// 4. Constructor chalao
+// 5. Object return karo
+
+// Behind the scenes (manual):
+function myNew(Constructor, ...args) {
+  const obj = {};
+  obj.__proto__ = Constructor.prototype;
+  const result = Constructor.apply(obj, args);
+  return result instanceof Object ? result : obj;
+}
+
+const p2 = myNew(Person, "Ashish");
+// Same as: new Person("Ashish")
+```
+
+---
+
+## 6. Class bhi Prototype hi hai!
+
+```js
+// ES6 Class:
+class Animal {
   constructor(name) {
     this.name = name;
   }
-
-  greet() {
-    console.log(`Hi ${this.name}`);
+  speak() {
+    console.log(this.name, "bol raha hai!");
   }
 }
 
-const p1 = new Person("Ashish");
+// Yeh EXACTLY same hai:
+function Animal(name) {
+  this.name = name;
+}
+Animal.prototype.speak = function () {
+  console.log(this.name, "bol raha hai!");
+};
 
-console.log(typeof Person);                // function
-console.log(p1.__proto__ === Person.prototype); // true
-console.log(p1.greet === Person.prototype.greet); // true
-```
-
-**Matlab:** `class` sirf syntactic sugar hai. Andar se wahi prototype inheritance chal raha hai.
-
----
-
-## 7. Important Methods
-
-```js
-const obj = { name: "Ashish" };
-
-// 1. hasOwnProperty → sirf khud ki property check karta hai
-console.log(obj.hasOwnProperty("name")); // true
-console.log(obj.hasOwnProperty("toString")); // false
-
-// 2. isPrototypeOf
-console.log(Object.prototype.isPrototypeOf(obj)); // true
-
-// 3. instanceof
-function Person() {}
-const p = new Person();
-console.log(p instanceof Person); // true
-console.log(p instanceof Object); // true
-
-// 4. Object.getPrototypeOf / setPrototypeOf
-console.log(Object.getPrototypeOf(p) === Person.prototype); // true
+// Class = Prototype ka SUGAR SYNTAX hai! ✅
+typeof Animal; // "function" ← Class bhi function hai!
 ```
 
 ---
 
-## 8. Inheritance Example (Full)
+## 7. Full Inheritance Example
 
 ```js
 function Animal(name) {
   this.name = name;
 }
-
 Animal.prototype.eat = function () {
-  console.log(`${this.name} is eating`);
+  console.log(this.name, "kha raha hai!");
 };
 
 function Dog(name, breed) {
-  Animal.call(this, name); // parent constructor call
+  Animal.call(this, name); // Step 1: parent constructor
   this.breed = breed;
 }
 
-// Inheritance setup
+// Step 2: Prototype chain link
 Dog.prototype = Object.create(Animal.prototype);
-Dog.prototype.constructor = Dog;
+Dog.prototype.constructor = Dog; // Step 3: constructor fix
 
 Dog.prototype.bark = function () {
-  console.log(`${this.name} is barking`);
+  console.log(this.name, "bhaunk raha hai!");
 };
 
-const d1 = new Dog("Tommy", "Labra");
-d1.eat();   // Tommy is eating
-d1.bark();  // Tommy is barking
+const dog = new Dog("Tommy", "Labrador");
+
+dog.bark();    // Tommy bhaunk raha hai! (Dog.prototype)
+dog.eat();     // Tommy kha raha hai! (Animal.prototype)
+dog.toString(); // (Object.prototype)
+
+// Chain:
+// dog
+//  └── Dog.prototype
+//       └── Animal.prototype
+//            └── Object.prototype
+//                 └── null
 ```
 
 ---
 
-## 9. Common Interview Questions
+## 8. `Object.create()` — Direct Prototype Set
 
-**Q1. Prototype kya hota hai?**  
-→ Har object ke paas ek hidden `[[Prototype]]` hota hai. Property nahi mili toh usme dhundhta hai.
-
-**Q2. `__proto__` aur `prototype` mein farak?**  
-→ `prototype` function ki property hai.  
-→ `__proto__` object ka actual prototype link hai.  
-→ `obj.__proto__ === Constructor.prototype`
-
-**Q3. Prototype Chain kya hai?**  
-→ Object → uska prototype → uska prototype → ... → `Object.prototype` → `null`
-
-**Q4. Kyun methods prototype pe define karte hain?**  
-→ Memory efficient. Saare instances same method share karte hain.
-
-**Q5. `Object.create` kya karta hai?**  
-→ Naya object banata hai jiska prototype specified object hota hai.
-
-**Q6. `hasOwnProperty` vs `in` operator?**  
 ```js
-"toString" in obj          // true (prototype se bhi check)
-obj.hasOwnProperty("toString") // false (sirf own)
+const parent = {
+  greet() {
+    console.log("Hello from parent!");
+  }
+};
+
+const child = Object.create(parent);
+child.name = "Ashish";
+
+child.greet(); // "Hello from parent!" ✅
+console.log(child.__proto__ === parent); // true
 ```
 
-**Q7. `instanceof` kaise kaam karta hai?**  
-→ Object ki prototype chain mein Constructor.prototype ko dhundhta hai.
+### `Object.create()` vs `new`
 
-**Q8. Class inheritance ke peeche kya hota hai?**  
-→ Wahi prototype chain set hoti hai. `class` sirf sugar hai.
+|                  | `new`                          | `Object.create()`              |
+|------------------|--------------------------------|--------------------------------|
+| Constructor      | Chalata hai                    | Nahi chalata                   |
+| Prototype link   | Haan                           | Haan                           |
+| Kab use karein   | Full object banana hai         | Sirf inheritance chahiye       |
 
-**Q9. `null` prototype wala object kaise banaye?**  
+---
+
+## 9. `hasOwnProperty` — Mera hai ya Parent ka?
+
 ```js
+function Person(name) {
+  this.name = name;
+}
+Person.prototype.greet = function () {};
+
+const p = new Person("Ashish");
+
+console.log(p.hasOwnProperty("name"));  // true  (own)
+console.log(p.hasOwnProperty("greet")); // false (prototype se)
+
+// for...in loop mein:
+for (let key in p) {
+  if (p.hasOwnProperty(key)) {
+    console.log("Own:", key);       // name
+  } else {
+    console.log("Inherited:", key); // greet
+  }
+}
+```
+
+---
+
+## 10. Prototype Pollution — Security Issue!
+
+```js
+// BAHUT DANGEROUS! ❌
+Object.prototype.hack = "hacked!";
+
+const obj = {};
+console.log(obj.hack); // "hacked!"
+// Saare objects affect ho gaye!
+
+// Real attack:
+const userInput = JSON.parse('{"__proto__": {"admin": true}}');
+// Ab saare objects ka admin = true! 💀
+
+// Fix:
+const safeObj = Object.create(null); // koi prototype nahi! ✅
+// Ya Map use karo Object ki jagah
+```
+
+---
+
+## 11. Important Methods
+
+```js
+// 1. Object.getPrototypeOf()  (sahi tarika)
+Object.getPrototypeOf(obj);
+
+// 2. Object.setPrototypeOf()
+Object.setPrototypeOf(child, parent);
+
+// 3. instanceof
+dog instanceof Dog;    // true
+dog instanceof Animal; // true
+dog instanceof Object; // true
+
+// 4. Object.create(null)
 const pure = Object.create(null); // koi prototype nahi
 ```
 
-**Q10. Prototype pollution kya hota hai?**  
-→ `Object.prototype` ko modify karne se saare objects affect hote hain (security risk).
+---
+
+## 12. Common Interview Questions
+
+**Q1. Prototype kya hai?**  
+"Prototype ek object hai jo doosre objects ko properties aur methods inherit karne deta hai. Har object ke paas ek `__proto__` hota hai jo uske parent ko point karta hai. Jab koi property nahi milti toh JavaScript prototype chain mein upar jaata hai!"
+
+**Q2. `__proto__` vs `prototype`?**  
+```js
+p.__proto__ === Person.prototype; // true
+// prototype → function pe hoti hai ("Parent ka ghar")
+// __proto__  → object pe hota hai ("Mera baap kaun hai")
+```
+
+**Q3. Prototype Chain kaise kaam karta hai?**  
+Property pehle object mein, phir `__proto__` mein, phir uske upar... `null` tak.
+
+**Q4. `new` keyword ke andar kya hota hai?**  
+```js
+function myNew(Constructor, ...args) {
+  const obj = {};
+  obj.__proto__ = Constructor.prototype;
+  const result = Constructor.apply(obj, args);
+  return result instanceof Object ? result : obj;
+}
+```
+
+**Q5. Inheritance kaise karoge?**  
+```js
+Dog.prototype = Object.create(Animal.prototype);
+Dog.prototype.constructor = Dog;
+Animal.call(this, name); // properties ke liye
+```
+
+**Q6. `instanceof` kaise kaam karta hai?**  
+```js
+function myInstanceOf(obj, Constructor) {
+  let proto = Object.getPrototypeOf(obj);
+  while (proto !== null) {
+    if (proto === Constructor.prototype) return true;
+    proto = Object.getPrototypeOf(proto);
+  }
+  return false;
+}
+```
+
+**Q7. Class aur Prototype mein fark?**  
+Sirf syntax ka fark. Class = Syntactic Sugar. Andar se same prototype inheritance.
+
+**Q8. Prototype Pollution kya hai?**  
+`Object.prototype` ko modify karne se saare objects affect hote hain. Fix: `Object.create(null)` ya `Map`.
+
+**Q9. `Object.create()` vs `new`?**  
+`new` → constructor bhi chalata hai  
+`Object.create()` → sirf prototype link karta hai
+
+**Q10. `hasOwnProperty` vs `in`?**  
+```js
+"toString" in obj               // true (prototype se bhi)
+obj.hasOwnProperty("toString")  // false (sirf own)
+```
 
 ---
 
-## 10. Quick Summary (Interview mein bol dena)
+## Ek Line Summary (Interview mein bol dena)
 
-> "JavaScript prototypal inheritance use karta hai. Har object ke paas `[[Prototype]]` hota hai. Property nahi mili toh prototype chain mein upar jata hai. `prototype` property constructor functions pe hoti hai, `__proto__` objects pe. Modern `class` bhi andar se prototype hi use karti hai. Methods ko prototype pe rakhne se memory efficient hota hai."
+> "Prototype ek parent object hai. Har object apne `__proto__` se properties inherit karta hai. Yahi chain banati hai — Prototype Chain! Class bhi andar se prototype hi use karti hai — sirf syntax alag hai."
