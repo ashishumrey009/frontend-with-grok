@@ -1,4 +1,4 @@
-# Chapter 28: Event Loop (Full Details + Interview Questions)
+# Chapter 28: Event Loop (Complete + Interview Ready)
 
 **Interviewer:** Event Loop explain karo.
 
@@ -35,8 +35,10 @@ Complete hone pe:
    ↓
 Call Stack empty hote hi:
   1. Pehle SAARI Microtasks khatam
-  2. Phir EK Macrotask
-  3. Phir phir se Microtasks check
+  2. Phir requestAnimationFrame (Browser)
+  3. Browser Render
+  4. Phir EK Macrotask
+  5. Phir phir se Microtasks check
 ```
 
 ---
@@ -84,7 +86,113 @@ console.log("4");
 
 ---
 
-## 5. Nested Microtasks
+## 5. `queueMicrotask` — Direct Microtask
+
+```js
+queueMicrotask(() => {
+  console.log("Direct microtask!");
+});
+
+Promise.resolve().then(() => {
+  console.log("Promise microtask!");
+});
+
+console.log("Sync!");
+
+// Output:
+// Sync!
+// Direct microtask!
+// Promise microtask!
+
+// Jo pehle register hua → pehle chala!
+// Kab use: Jab Promise overhead nahi chahiye but microtask timing chahiye!
+```
+
+---
+
+## 6. `requestAnimationFrame` — Browser Rendering
+
+```js
+console.log("1 - sync");
+
+setTimeout(() => console.log("2 - timeout"), 0);
+
+Promise.resolve().then(() => console.log("3 - promise"));
+
+requestAnimationFrame(() => console.log("4 - rAF"));
+
+console.log("5 - sync");
+
+// Output:
+// 1 - sync
+// 5 - sync
+// 3 - promise    ← microtask
+// 4 - rAF        ← render se pehle!
+// 2 - timeout    ← macrotask
+
+// Order: Sync → Microtasks → rAF → Render → Macrotask
+```
+
+**Animation ke liye:**
+```js
+// BAD - setInterval
+setInterval(() => {
+  element.style.left = x + "px";
+  x++;
+}, 16);
+
+// GOOD - rAF
+function animate() {
+  element.style.left = x + "px";
+  x++;
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+```
+
+---
+
+## 7. Starvation — Real Problem!
+
+```js
+// Infinite microtasks = Macrotask kabhi nahi chalega!
+
+function infiniteMicrotask() {
+  Promise.resolve().then(() => {
+    console.log("Microtask!");
+    infiniteMicrotask(); // dobara queue mein!
+  });
+}
+
+infiniteMicrotask();
+setTimeout(() => console.log("Timeout"), 0);
+
+// Output: Microtask! Microtask! ... infinite!
+// "Timeout" KABHI NAHI CHALEGA! ❌ UI freeze!
+```
+
+---
+
+## 8. `setTimeout` vs `setInterval`
+
+```js
+// PROBLEM with setInterval:
+setInterval(() => {
+  heavyWork(); // agar 200ms leta hai, interval 100ms hai?
+}, 100);
+// Queue mein callbacks pile up! Memory leak + unpredictable timing!
+
+// BETTER: Recursive setTimeout
+function repeat() {
+  heavyWork(); // pehle kaam karo
+  setTimeout(repeat, 100); // phir schedule karo
+}
+repeat(); // ✅ No pile up!
+```
+
+---
+
+## 9. Nested Microtasks + `async/await`
 
 ```js
 Promise.resolve().then(() => {
@@ -95,23 +203,10 @@ Promise.resolve().then(() => {
 });
 
 setTimeout(() => console.log("Macro"), 0);
-
 console.log("Sync");
+
+// Output: Sync → Micro 1 → Micro 2 → Macro
 ```
-
-**Output:**
-```
-Sync
-Micro 1
-Micro 2
-Macro
-```
-
-Micro 2 bhi pehle chalega kyunki microtask queue tab tak empty nahi hui.
-
----
-
-## 6. `async/await` bhi Microtask hai
 
 ```js
 async function foo() {
@@ -122,70 +217,143 @@ async function foo() {
 
 foo();
 console.log("C");
-```
 
-**Output:**
-```
-A
-C
-B
-```
-
-`await` ke baad ka code microtask queue mein chala jata hai.
-
----
-
-## 7. Visual Flow
-
-```
-┌───────────────────────────┐
-│        Call Stack         │
-└────────────┬──────────────┘
-             │ empty?
-             ▼
-┌───────────────────────────┐
-│     Microtask Queue       │  ← Pehle yeh khali karo
-│  (Promises, queueMicrotask)│
-└────────────┬──────────────┘
-             │ empty?
-             ▼
-┌───────────────────────────┐
-│     Macrotask Queue       │  ← Phir ek macrotask
-│  (setTimeout, setInterval) │
-└───────────────────────────┘
+// Output: A → C → B
+// await ke baad ka code microtask queue mein jata hai
 ```
 
 ---
 
-## 8. Hard Example (Interview Favorite)
+## 10. Hard Interview Question ⭐
 
 ```js
-console.log("start");
+async function async1() {
+  console.log("async1 start");    // 2
+  await async2();
+  console.log("async1 end");      // 6
+}
 
-setTimeout(() => console.log("timeout"), 0);
+async function async2() {
+  console.log("async2");          // 3
+}
 
-Promise.resolve()
-  .then(() => {
-    console.log("promise1");
-    return Promise.resolve();
-  })
-  .then(() => console.log("promise2"));
+console.log("script start");        // 1
 
-console.log("end");
-```
+setTimeout(() => {
+  console.log("setTimeout");      // 8
+}, 0);
 
-**Output:**
-```
-start
-end
-promise1
-promise2
-timeout
+async1();
+
+new Promise((resolve) => {
+  console.log("promise1");        // 4
+  resolve();
+}).then(() => {
+  console.log("promise2");        // 7
+});
+
+console.log("script end");          // 5
+
+// Output:
+// script start
+// async1 start
+// async2
+// promise1
+// script end
+// async1 end
+// promise2
+// setTimeout
 ```
 
 ---
 
-## 9. Common Interview Questions
+## 11. Promise.resolve() vs then mein Promise return
+
+```js
+Promise.resolve()
+  .then(() => {
+    console.log("1");
+    return Promise.resolve(); // ← extra tick!
+  })
+  .then(() => console.log("2"));
+
+Promise.resolve()
+  .then(() => console.log("3"))
+  .then(() => console.log("4"));
+
+// Output:
+// 1
+// 3
+// 4  ← "2" se pehle!
+// 2  ← extra microtask (unwrap) ki wajah se!
+
+// Interview: "Jab then() mein Promise return karo
+// toh ek extra microtask lagti hai unwrapping ke liye!"
+```
+
+---
+
+## 12. Node.js Event Loop (Agar Poochha)
+
+```js
+// Node.js phases:
+// 1. timers        → setTimeout, setInterval
+// 2. pending       → I/O callbacks
+// 3. idle/prepare  → internal
+// 4. poll          → naye I/O events
+// 5. check         → setImmediate (Node only!)
+// 6. close         → cleanup
+
+// I/O callback ke andar:
+fs.readFile("file.txt", () => {
+  setTimeout(() => console.log("timeout"), 0);
+  setImmediate(() => console.log("immediate"));
+  // Output: HAMESHA immediate pehle! (check phase after poll)
+});
+
+// process.nextTick → Promise se bhi pehle!
+process.nextTick(() => console.log("nextTick"));
+Promise.resolve().then(() => console.log("promise"));
+// nextTick pehle! Special priority!
+```
+
+---
+
+## Updated Visual Flow
+
+```
+┌────────────────────────────────────┐
+│           Call Stack                │
+│   console.log(), functions etc      │
+└─────────────────┬──────────────────┘
+                   │ empty?
+                   ▼
+┌────────────────────────────────────┐
+│         Microtask Queue             │ ← SAARI khatam karo!
+│  Promise.then, queueMicrotask,      │
+│  MutationObserver, process.nextTick │
+└─────────────────┬──────────────────┘
+                   │ empty?
+                   ▼
+┌────────────────────────────────────┐
+│    requestAnimationFrame (Browser)  │ ← Render se pehle
+└─────────────────┬──────────────────┘
+                   ▼
+┌────────────────────────────────────┐
+│         Browser Render              │ ← Paint, Layout
+└─────────────────┬──────────────────┘
+                   ▼
+┌────────────────────────────────────┐
+│         Macrotask Queue             │ ← EK macrotask
+│  setTimeout, setInterval,           │
+│  setImmediate (Node), I/O           │
+└────────────────────────────────────┘
+         ↑ Loop wapas!
+```
+
+---
+
+## Complete Interview Q&A
 
 **Q1. Event Loop kya hai?**  
 → Mechanism jo Call Stack empty hone pe Microtask/Macrotask queues se callbacks uthata hai.
@@ -206,10 +374,31 @@ timeout
 → Macrotasks kabhi nahi chalegi (starvation). UI freeze ho sakta hai.
 
 **Q7. Browser rendering kab hota hai?**  
-→ Macrotask ke baad, microtasks ke baad — render opportunity milti hai.
+→ Microtasks ke baad, Macrotask se pehle.
+
+**Q8. `queueMicrotask` kya hai?**  
+→ Direct microtask queue mein daalo. Promise banane ki zarurat nahi. Same priority as Promise.then.
+
+**Q9. `requestAnimationFrame` kab chalta hai?**  
+→ Microtasks ke baad, Browser render se pehle, Macrotask se pehle. Animations ke liye best!
+
+**Q10. Microtask starvation kya hai?**  
+→ Infinite microtasks se macrotasks kabhi nahi chalte! UI freeze.
+
+**Q11. `setInterval` ki problem kya hai?**  
+→ Heavy kaam ho toh callbacks pile up. Recursive `setTimeout` better hai.
+
+**Q12. `then()` mein Promise return karne se kya fark?**  
+→ Extra microtask lagti hai unwrap ke liye. Order unexpected lag sakta hai.
+
+**Q13. Node.js mein `setImmediate` vs `setTimeout`?**  
+→ I/O callback ke andar: setImmediate pehle (check phase). Bahar: unpredictable.
+
+**Q14. `process.nextTick` kya hai?**  
+→ Node.js only! Promise se bhi pehle chalta hai. Special microtask queue.
 
 ---
 
 ## Ek Line Summary (Interview mein bol dena)
 
-> "JavaScript single-threaded hai. Event Loop Call Stack empty hone pe pehle saari Microtasks (Promises) chalata hai, phir ek Macrotask (setTimeout). Isliye Promise hamesha setTimeout se pehle chalta hai."
+> "Event Loop: Sync → Microtasks (saari) → rAF → Render → Macrotask (ek) → repeat! Promise = microtask (high priority), setTimeout = macrotask (low priority), rAF = render cycle se tied. Infinite microtasks = UI freeze! Recursive setTimeout > setInterval!"
