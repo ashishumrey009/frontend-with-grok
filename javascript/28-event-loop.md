@@ -319,36 +319,70 @@ Promise.resolve().then(() => console.log("promise"));
 
 ---
 
-## Updated Visual Flow
+## Event Loop Diagram (Clean)
 
+```text
++--------------------------------------+
+|            CALL STACK                |
+|   console.log(), functions, etc.     |
++------------------+-------------------+
+                   |
+                   |  Stack empty?
+                   v
++--------------------------------------+
+|         MICROTASK QUEUE              |
+|  Promise.then                        |
+|  queueMicrotask                      |
+|  MutationObserver                    |
+|  process.nextTick (Node)             |
+|                                      |
+|  >>> SAARI microtasks khatam karo    |
++------------------+-------------------+
+                   |
+                   |  Queue empty?
+                   v
++--------------------------------------+
+|     requestAnimationFrame (rAF)      |
+|     (Browser only)                   |
+|                                      |
+|  >>> Render se PEHLE chalta hai      |
++------------------+-------------------+
+                   |
+                   v
++--------------------------------------+
+|         BROWSER RENDER               |
+|     Paint + Layout + Composite       |
++------------------+-------------------+
+                   |
+                   v
++--------------------------------------+
+|         MACROTASK QUEUE              |
+|  setTimeout                          |
+|  setInterval                         |
+|  setImmediate (Node)                 |
+|  I/O callbacks                       |
+|                                      |
+|  >>> Sirf EK macrotask uthao         |
++------------------+-------------------+
+                   |
+                   |
+                   +-----> Loop wapas Call Stack pe
 ```
-┌────────────────────────────────────┐
-│           Call Stack                │
-│   console.log(), functions etc      │
-└─────────────────┬──────────────────┘
-                   │ empty?
-                   ▼
-┌────────────────────────────────────┐
-│         Microtask Queue             │ ← SAARI khatam karo!
-│  Promise.then, queueMicrotask,      │
-│  MutationObserver, process.nextTick │
-└─────────────────┬──────────────────┘
-                   │ empty?
-                   ▼
-┌────────────────────────────────────┐
-│    requestAnimationFrame (Browser)  │ ← Render se pehle
-└─────────────────┬──────────────────┘
-                   ▼
-┌────────────────────────────────────┐
-│         Browser Render              │ ← Paint, Layout
-└─────────────────┬──────────────────┘
-                   ▼
-┌────────────────────────────────────┐
-│         Macrotask Queue             │ ← EK macrotask
-│  setTimeout, setInterval,           │
-│  setImmediate (Node), I/O           │
-└────────────────────────────────────┘
-         ↑ Loop wapas!
+
+**Simple Order yaad rakh:**
+
+```text
+Sync Code
+   ↓
+Saari Microtasks
+   ↓
+rAF (animation)
+   ↓
+Browser Render
+   ↓
+Ek Macrotask
+   ↓
+(dobara Microtasks check...)
 ```
 
 ---
