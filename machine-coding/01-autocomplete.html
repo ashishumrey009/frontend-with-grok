@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Autocomplete — Machine Coding</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; }
+    .ac { position: relative; width: 320px; }
+    .ac input { width: 100%; padding: 8px; box-sizing: border-box; }
+    .list {
+      position: absolute; left: 0; right: 0; margin: 0; padding: 0;
+      list-style: none; border: 1px solid #ccc; background: #fff;
+      max-height: 240px; overflow: auto; z-index: 10;
+    }
+    .list li { padding: 8px; cursor: pointer; }
+    .list li.active, .list li:hover { background: #eee; }
+    .hint { font-size: 12px; color: #666; padding: 6px 0; }
+    .hint.error { color: crimson; }
+  </style>
+</head>
+<body>
+  <h3>Product search</h3>
+  <div class="ac" id="box">
+    <input id="q" placeholder="Type at least 2 letters..." autocomplete="off" />
+    <div id="hint" class="hint"></div>
+    <ul id="list" class="list" hidden></ul>
+  </div>
+
+  <script>
+    const input = document.getElementById("q");
+    const list = document.getElementById("list");
+    const hint = document.getElementById("hint");
+    const box = document.getElementById("box");
+
+    const cache = new Map();
+    let active = -1;
+    let results = [];
+    let timer;
+    let controller;
+
+    function setHint(text, isError) {
+      hint.textContent = text || "";
+      hint.className = "hint" + (isError ? " error" : "");
+    }
+
+    function render() {
+      list.innerHTML = "";
+      if (!results.length) {
+        list.hidden = true;
+        return;
+      }
+      results.forEach((item, i) => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        if (i === active) li.className = "active";
+        li.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          select(item);
+        });
+        list.appendChild(li);
+      });
+      list.hidden = false;
+    }
+
+    function select(item) {
+      input.value = item;
+      results = [];
+      active = -1;
+      list.hidden = true;
+      setHint("");
+    }
+
+    async function search(q) {
+      if (cache.has(q)) {
+        results = cache.get(q);
+        setHint(results.length ? "" : "No results");
+        render();
+        return;
+      }
+
+      controller?.abort();
+      controller = new AbortController();
+      setHint("Loading...");
+
+      try {
+        const res = await fetch(
+          "https://dummyjson.com/products/search?q=" + encodeURIComponent(q),
+          { signal: controller.signal }
+        );
+        if (!res.ok) throw new Error("fail");
+        const data = await res.json();
+        results = (data.products || []).map((p) => p.title);
+        cache.set(q, results);
+        setHint(results.length ? "" : "No results");
+        active = -1;
+        render();
+      } catch (e) {
+        if (e.name !== "AbortError") setHint("Could not fetch", true);
+      }
+    }
+
+    input.addEventListener("input", () => {
+      const q = input.value.trim();
+      active = -1;
+      clearTimeout(timer);
+      controller?.abort();
+
+      if (q.length < 2) {
+        results = [];
+        render();
+        setHint("");
+        return;
+      }
+
+      timer = setTimeout(() => search(q), 300);
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (list.hidden || !results.length) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        active = (active + 1) % results.length;
+        render();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        active = active <= 0 ? results.length - 1 : active - 1;
+        render();
+      } else if (e.key === "Enter" && active >= 0) {
+        e.preventDefault();
+        select(results[active]);
+      } else if (e.key === "Escape") {
+        list.hidden = true;
+      }
+    });
+
+    document.addEventListener("mousedown", (e) => {
+      if (!box.contains(e.target)) list.hidden = true;
+    });
+  </script>
+</body>
+</html>
