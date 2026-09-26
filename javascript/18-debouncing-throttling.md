@@ -93,6 +93,63 @@ search("apple"); // 500ms baad API call → "apple"
 
 ---
 
+## 1.1 Common Mistakes (practice session, 26 Sep 2026)
+
+### Mistake 1: `clearTimeout` ko `setTimeout` ke andar daalna
+
+```js
+// ❌ Galat
+timer = setTimeout(() => {
+  if (timer) clearTimeout(timer);
+  else fn(...args);
+}, delay);
+```
+
+`setTimeout` ke andar wala code delay khatam hone ke **baad** chalta hai. Tab tak purana timer already chal chuka hota hai, to use cancel karne ka koi fayda nahi.
+
+Timeline (user "ab" type karta hai):
+- "a" dabaya, timer 1 shuru (300ms)
+- 100ms baad "b" dabaya. Timer 1 **isi waqt** cancel hona chahiye, naya timer banne se pehle.
+
+```js
+// ✅ Sahi: cancel bahar, naye timer se pehle
+clearTimeout(timer);
+timer = setTimeout(() => fn.apply(this, args), delay);
+```
+
+### Mistake 2: `if (timer)` check lagana
+
+Zaroori nahi. `clearTimeout(undefined)` koi error nahi deta, bas kuch nahi karta.
+
+### Mistake 3: `fn(...args)` likhna aur `this` kho dena
+
+`this` ka rule: function **kaise call hua**, us pe depend karta hai. `user.greet()` → `this` = `user`. Akela `fn()` → `this` kho jaata hai (`undefined`).
+
+```js
+const user = {
+  name: "Ashish",
+  greet() {
+    console.log("Hi " + this.name);
+  },
+};
+
+// fn(...args) wale debounce ke saath:
+user.greet = debounce(user.greet, 300);
+user.greet(); // "Hi undefined" ❌
+```
+
+Fix: `fn.apply(this, args)`.
+
+1. `user.greet()` call hone pe `return function` wala function chalta hai, uska `this` = `user`.
+2. `setTimeout` ke andar **arrow function** hai. Arrow ka apna `this` nahi hota, wo bahar wale function ka `this` utha leta hai, to andar bhi `this` = `user`.
+3. `fn.apply(this, args)` = `fn` chalao, `this` set karke aur `args` pass karke.
+
+Isliye **bahar `function`** likhte hain, arrow nahi. Bahar arrow hota to `this` kabhi `user` banta hi nahi.
+
+**Interview line:** *"Maine `apply` use kiya taaki original `this` aur arguments preserve rahein, varna method pe debounce lagane se `this` kho jaata."*
+
+---
+
 ## 2. Throttle Polyfill (Leading Edge)
 
 ```js
@@ -219,7 +276,7 @@ function throttle(fn, delay) {
 
 **Answer:**
 > `fn.apply(this, args)` use karke.
-> Arrow function se bhi kar sakte ho lekin `this` binding toot sakti hai isliye normal function + apply better hai.
+> Returned function normal `function` hona chahiye (taaki call site ka `this` mile), aur `setTimeout` ke andar arrow function (taaki wahi `this` andar tak aaye). Returned function arrow hua to `this` toot jaata hai. Detail: section 1.1, Mistake 3.
 
 ### Q9. Cancel karne ka option chahiye ho toh?
 
